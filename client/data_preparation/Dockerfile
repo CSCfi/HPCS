@@ -1,15 +1,17 @@
 # Using Python original Docker image
-FROM python:3.9-bullseye
-
-# Update & Upgrade global packages base
-RUN apt update -y \
-	&& apt upgrade -y
+FROM --platform=linux/amd64 python:3.9-alpine
 
 # Install necessary packages
-RUN apt install -y \
+RUN apk add \
     git \
     curl \
-    jq
+    jq \
+    build-base \
+    libffi-dev
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf -o rustup.sh ; chmod +x rustup.sh ; ./rustup.sh -y
+ENV PATH="$PATH:/root/.cargo/bin"
 
 # Install spire-agent
 RUN wget -q https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz

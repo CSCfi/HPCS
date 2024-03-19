@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 ## This entrypoint wraps up the container preparation with the agent spawning and the key shipping.
 #
