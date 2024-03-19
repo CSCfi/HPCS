@@ -8,8 +8,10 @@ spire_server_bin = "./bin/spire-server"
 pre_command = "microk8s.kubectl exec -n spire spire-server-0 --"
 
 
-jwt_workload_api = default_jwt_source.DefaultJwtSource(
-    spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock"
+jwt_workload_api =  default_jwt_source.DefaultJwtSource(
+    workload_api_client=None,
+    spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock",
+    timeout_in_seconds=None
 )
 
 
