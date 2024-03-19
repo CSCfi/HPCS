@@ -112,11 +112,11 @@ def create_sif_image(
         encrypted (bool, optional): Wether or not to encrypt the container, keys are generated relatively to the current path, and are called "keys, keys.pub". Defaults to False.
     """
     # Check that the build environment exists
-    build_env_exists = check_build_env_exists()
+    build_env_exists = check_build_env_exists(docker_client=docker_client)
     if not build_env_exists:
         print("Build environment container image doesn't exist, building it")
-        build_build_env()
-        build_env_exists = check_build_env_exists()
+        build_build_env(docker_client=docker_client)
+        build_env_exists = check_build_env_exists(docker_client=docker_client)
 
     # Fixing the build environment image tag
     build_env_image_tag = build_env_exists.attrs["RepoTags"][0]
