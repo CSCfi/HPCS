@@ -1,0 +1,141 @@
+#!/bin/bash
+
+#####################################################################
+#    __         __  __     __    __     __     ______     _____     #
+#   /\ \       /\ \/\ \   /\ "-./  \   /\ \   /\  ___\   /\  __-.   #
+#   \ \ \____  \ \ \_\ \  \ \ \-./\ \  \ \ \  \ \___  \  \ \ \/\ \  #
+#    \ \_____\  \ \_____\  \ \_\ \ \_\  \ \_\  \/\_____\  \ \____-  #
+#     \/_____/   \/_____/   \/_/  \/_/   \/_/   \/_____/   \/____/  #
+#                                                                   #
+#####################################################################
+#           Auto generated SBATCH, handling a secured job           #
+#####################################################################
+
+# Job description
+
+#SBATCH --job-name JOB_NAME
+#SBATCH --nodes NODES
+#SBATCH --partition PARTITION
+#SBATCH --time TIME
+#SBATCH --nodelist NODELIST
+
+# Job facturation
+
+#SBATCH --account ACCOUNT
+
+# Logs
+#SBATCH -o WORKDIR/JOB_NAME.out
+
+# Cleanup
+cleanup() {
+    rm -r /tmp/data
+    rm /tmp/agent*
+    kill "$1"
+    exit "$2"
+}
+
+# Colors for prints
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Useful variables
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Entering sbatch"
+
+# Necessary vars
+
+export vault="VAULT_ADDRESS"
+
+# Work directory
+
+WORKING_DIRECTORY=WORKDIR
+mkdir -p ${WORKING_DIRECTORY}
+
+# Bring LUMI-SD logic
+
+## Clone repo in common directory if it doesn't already exists
+### For the moment : assume it's already cloned in ~/LUMI-secure-processing
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running agent registration"
+
+# Spawn spire-agent
+cd ~/LUMI-secure-processing           || exit 1
+python3 ./utils/spawn_agent.py -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
+spire_agent_pid=$!
+
+# Wait until agent runs properly
+until [ -e /tmp/agent.sock ]
+do
+    echo -e "${RED}[LUMI-SD][Job] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
+    sleep 10
+done
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Starting container setup"
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Decrypting container image"
+
+echo "Getting SVID from workload API ..."
+
+# Get SVID from workload
+svid=$(spire-agent api fetch jwt -audience TESTING -socketPath /tmp/agent.sock -spiffeID APPLICATION_SPIFFEID | head -n2 | tail -n 1 | tr -d ' ' | tr -d '\t' )
+
+echo "Logging in to the vault ..."
+
+# Log in to the vault using SVID, access role
+echo "{\"role\": \"APPLICATION_ACCESS_ROLE\", \"jwt\" : \"$svid\"}" > /tmp/login
+application_token=$(curl -s --request POST --data @/tmp/login http://${vault}/v1/auth/jwt/login | jq '.auth.client_token' -r)  || cleanup $spire_agent_pid 1
+
+echo "Getting container decryption key ..."
+
+# Use provided vault token (from login) to access secrets
+data_key=$(curl -s -H "X-Vault-Token: $application_token" http://${vault}/v1/kv/data/APPLICATION_SECRET_PATH | jq '.data.data.key' -r)    || cleanup $spire_agent_pid 1
+echo "$data_key" > /tmp/container_key
+
+echo "Decrypting container image ..."
+
+# Decrypt the container image
+~/LUMI-secure-processing/client/container_preparation/input_logic/age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Creating encrypted volumes"
+
+# Prepare container run
+cd $WORKING_DIRECTORY                       || cleanup $spire_agent_pid 1
+
+# Setup encrypted volumes environment
+rm -rf ./output ./input
+mkdir ./output ./input
+password_in=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c 25)
+password_out=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c 25)
+
+# Setup encrypted volumes
+/users/etellier/gocryptfs -q -init --extpass echo --extpass "$password_out" output
+/users/etellier/gocryptfs -q -init --extpass echo --extpass "$password_in" input
+
+# Mounting cipher version of the output encrypted filesystem to write final encrypted results
+# Mounting the encrypted input data tgz to the container to decrypt it in the input encrypted filesystem
+BASIC_FLAGS="--bind ./output:/tmp/output --bind DATA_PATH:/sd-container/input/data.tgz:rw"
+
+# Encrypted binds inside of the container
+BIND_ENCRYPTED_VOLUME_FLAG="--fusemount host:"
+BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_INPUT="/users/etellier/gocryptfs -q --extpass echo --extpass ${password_in} ${WORKING_DIRECTORY}/input /sd-container/encrypted"
+BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_OUTPUT="/users/etellier/gocryptfs -q --extpass echo --extpass ${password_out} ${WORKING_DIRECTORY}/output /sd-container/output"
+BIND_INPUT="INPUT_SCRIPTS_DIR"
+BIND_OUTPUT="OUTPUT_SCRIPTS_DIR"
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Preparing data decryption"
+
+# Get SVID from workload
+svid=$(spire-agent api fetch jwt -audience TESTING -socketPath /tmp/agent.sock -spiffeID DATA_SPIFFEID | head -n2 | tail -n 1 | tr -d ' ' | tr -d '\t' )
+
+# Export environment vars for final container
+export data_login="{\"role\": \"DATA_ACCESS_ROLE\", \"jwt\" : \"$svid\"}"
+export data_path="DATA_SECRET_PATH"
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running container"
+
+# Run the container
+singularity run $BIND_ENCRYPTED_VOLUME_FLAG"$BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_INPUT" $BIND_ENCRYPTED_VOLUME_FLAG"$BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_OUTPUT" $BASIC_FLAGS $BIND_INPUT $BIND_OUTPUT SINGULARITY_SUPPLEMENTARY_FLAGS $WORKING_DIRECTORY/app.sif APPLICATION_ARGUMENTS
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Container ran, output available at $(pwd)/output"
