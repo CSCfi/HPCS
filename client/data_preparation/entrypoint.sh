@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 ## This entrypoint wraps up the Data preparation with the agent spawning and the key shipping.
 #

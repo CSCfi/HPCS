@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM --platform=linux/amd64 ubuntu:22.04
 
 # Update & Upgrade global packages base
 RUN apt update -y \
@@ -17,8 +17,8 @@ RUN apt install \
 RUN DEBIAN_FRONTEND=noninteractive apt install -y cryptsetup
 
 # Get apptainer installer and install it
-RUN wget -q https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
-RUN apt install -y ./apptainer_1.2.5_amd64.deb
+RUN wget -q https://github.com/apptainer/apptainer/releases/download/v1.3.0/apptainer_1.3.0_amd64.deb
+RUN apt install -y ./apptainer_1.3.0_amd64.deb
 
 # Create a directory to eventually map for output image
 RUN mkdir /output
