@@ -6,6 +6,7 @@ from lib.spire_interactions import (
     get_server_identity_JWT,
     validate_client_JWT_SVID,
 )
+from lib  import spire_interactions
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
 
@@ -24,6 +25,12 @@ app = Quart(__name__)
 options = parse_arguments()
 configuration = parse_configuration(options.config)
 
+if configuration['spire-server'].get('spire-server-bin') :
+    spire_interactions.spire_server_bin = configuration['spire-server']['spire-server-bin']
+
+if configuration['spire-server'].get('pre-command') :
+    spire_interactions.pre_command = configuration['spire-server']['pre-command']
+    
 # Defining the trust domain (SPIRE Trust Domain)
 trust_domain = configuration['spire-server']['trust-domain']
 
