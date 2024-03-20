@@ -9,7 +9,8 @@ from lib.spire_interactions import (
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
 
-sys.path.append(os.path.expanduser("../"))
+from tools.config.config import parse_configuration
+from tools.cli.cli import parse_arguments
 from utils.vault.vault_utils import (
     vault_login,
     write_client_policy,
@@ -20,11 +21,14 @@ from utils.vault.vault_utils import (
 
 app = Quart(__name__)
 
+options = parse_arguments()
+configuration = parse_configuration(options.config)
+
 # Defining the trust domain (SPIRE Trust Domain)
-trust_domain = "lumi-sd-dev"
+trust_domain = configuration['spire-server']['trust-domain']
 
 # Perform vault login, to be able to run later operations against vault
-vault_login(get_server_identity_JWT(), "lumi-sd-server")
+hvac_client = vault_login(configuration['vault']['url'], get_server_identity_JWT(), configuration['vault']['server-role'])
 
 
 # Dummy endpoint that handles the registration of compute nodes.
@@ -73,7 +77,7 @@ async def handle_client_registration():
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
     # Write a policy to the vault to authorize the client to write secrets
-    write_client_policy(f"client_{client_id}")
+    write_client_policy(hvac_client, f"client_{client_id}")
 
     # Create spiffeID out of this client id
     agent_spiffeID = SpiffeId.parse(f"spiffe://{trust_domain}/c/{client_id}")
@@ -93,7 +97,7 @@ async def handle_client_registration():
         )
 
         # Write the role bound to the workload's spiffeID
-        write_client_role(f"client_{client_id}", workload_spiffeID)
+        write_client_role(hvac_client, f"client_{client_id}", workload_spiffeID)
 
         # For each authorized container preparation process (Here, a list of docker container_preaparation image names)
         for digest in get_build_env_image_digests():
@@ -223,10 +227,10 @@ async def handle_workload_creation():
             compute_nodes_added[compute_node]["groups"] = groups_added
 
         # Generate and create a policy that gives read-only access to the application's secret
-        write_user_policy(f"client_{client_id}", data["secret"])
+        write_user_policy(hvac_client, f"client_{client_id}", data["secret"])
 
         # Generate and create a role bound to the policy and to the spiffeID
-        write_user_role(f"client_{client_id}", data["secret"], spiffeID)
+        write_user_role(hvac_client, f"client_{client_id}", data["secret"], spiffeID)
 
         # Success
         return {

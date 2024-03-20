@@ -285,7 +285,7 @@ if __name__ == "__main__":
     )
 
     # Login to the vault using client's certificate
-    vault_login(SVID, f"client_{client_id}")
+    hvac_client = vault_login(SVID, f"client_{client_id}")
 
     # Prepare secret
     secret = {}
@@ -293,7 +293,7 @@ if __name__ == "__main__":
         secret["key"] = pem.read()
 
     # Write secret to the vault
-    write_secret(secrets_path, secret)
+    write_secret(hvac_client, secrets_path, secret)
 
     print(
         f"Key successfully written to the vault. Users needs the role {user_role} to access the secret stored at {secrets_path}"
