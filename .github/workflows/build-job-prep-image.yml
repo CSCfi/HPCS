@@ -2,7 +2,7 @@ name: Build and publish HPCS jon preparation image
 on: [push]
 
 env:
-  IMAGE_NAME: hpcs/data-prep
+  IMAGE_NAME: hpcs/job-prep
 
 jobs:
   push:
