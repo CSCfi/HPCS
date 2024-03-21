@@ -14,8 +14,9 @@ RUN curl https://sh.rustup.rs -sSf -o rustup.sh ; chmod +x rustup.sh ; ./rustup.
 ENV PATH="$PATH:/root/.cargo/bin"
 
 # Install spire-agent
-RUN wget -q https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz
-RUN tar xvf spire-1.9.0-linux-amd64-musl.tar.gz ; mv spire-1.9.0 /opt ; mv /opt/spire-1.9.0 /opt/spire
+
+RUN wget -q https://github.com/spiffe/spire/releases/download/v1.9.1/spire-1.9.1-linux-amd64-musl.tar.gz
+RUN tar xvf spire-1.9.1-linux-amd64-musl.tar.gz ; mv spire-1.9.1 /opt ; mv /opt/spire-1.9.1 /opt/spire
 RUN ln -s /opt/spire/bin/spire-agent /usr/bin/spire-agent
 
 # Install pyspiffe package
