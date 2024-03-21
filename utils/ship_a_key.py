@@ -30,7 +30,8 @@ def parse_arguments() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         required=True,
-        help="Path to the client configuration file",
+        default="/tmp/hpcs-client.conf",
+        help="Configuration file (INI Format) (default: /tmp/hpcs-client.conf)",
     )
     parser.add_argument(
         "--users",
