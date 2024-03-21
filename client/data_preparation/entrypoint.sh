@@ -58,14 +58,19 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Entering entrypoi
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Registering and running SPIRE Agent"
 
-python3 ./utils/spawn_agent.py > /dev/null 2> /dev/null || exit 1  &
+python3 ./utils/spawn_agent.py --config $config > /dev/null 2> /dev/null &
 spire_agent_pid=$!
 
 until [ -e /tmp/agent.sock ]
 do
     echo -e "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
     sleep 10
+    if ! ps | grep $spire_agent_pid > /dev/null ; then
+        echo "spire agent died, aborting"
+        end_entrypoint "$spire_agent_pid" 1
+    fi
 done
+
 
 #
 ## [END] Perform node attestation

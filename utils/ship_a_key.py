@@ -10,8 +10,7 @@ from vault.vault_utils import vault_login, write_secret
 import yaml
 from hashlib import sha512
 from ssh_utils import ssh_connect, ssh_copy_file
-
-from configparser import ConfigParser, NoSectionError, NoOptionError
+from conf.client.conf import parse_configuration
 
 # Provide client_id from cli$
 # Same for trust domain
@@ -96,25 +95,6 @@ def parse_arguments() -> argparse.ArgumentParser:
     )
 
     return parser.parse_args()
-
-# Parse configuration file
-def parse_configuration(path : str):
-    config = ConfigParser()
-    config.read(path)
-    
-    if not 'hpcs-server' in config:
-        raise NoSectionError("hpcs-server section missing in configuration file, aborting")
-    
-    if not 'vault' in config:
-        raise NoSectionError("vault section missing in configuration file, aborting")
-    
-    if not 'url' in config['hpcs-server']:
-        raise NoOptionError("'hpcs-server' section is incomplete in configuration file, aborting")
-    
-    if not 'url' in config['vault']:
-        raise NoOptionError("'vault' section is incomplete in configuration file, aborting")
-        
-    return config
 
 
 def validate_options(options: argparse.ArgumentParser):
@@ -262,6 +242,7 @@ def create_authorized_workloads(
 if __name__ == "__main__":
     # Parse arguments from CLI
     options = parse_arguments()    
+    
     # Parse configuration file
     configuration = parse_configuration(options.config)
 

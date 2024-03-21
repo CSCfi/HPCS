@@ -1,4 +1,5 @@
 import platform, argparse, subprocess, requests
+from conf.client.conf import parse_configuration
 
 
 # Parse arguments from the cli
@@ -11,31 +12,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="CLI Optinons")
 
     parser.add_argument(
-        "--spire-trust-domain",
-        "-t",
-        type=str,
-        default="lumi-sd-dev",
-        help="Server address (default: lumi-sd-dev)",
-    )
-    parser.add_argument(
-        "--sd-server-address",
-        "-a",
-        type=str,
-        help="Server address",
-    )
-    parser.add_argument(
-        "--spire-server-port",
-        "-sp",
-        type=int,
-        default=10081,
-        help="Spire server port (default: 10081)",
-    )
-    parser.add_argument(
-        "--sd-server-port",
-        "-ap",
-        type=int,
-        default=10080,
-        help="SD API server port (default: 10080)",
+        "--config",
+        required=True,
+        help="Path to the client configuration file",
     )
     parser.add_argument(
         "--socketpath",
@@ -54,8 +33,7 @@ def parse_arguments():
 
     return parser.parse_args()
 
-
-def get_token(server, port, compute_node_token: bool):
+def get_token(url, compute_node_token: bool):
     """Get joinToken to perform node registration from server
 
     Args:
@@ -73,9 +51,9 @@ def get_token(server, port, compute_node_token: bool):
     # Check wether we are performing compute node attestation or client attestation, create url
     if compute_node_token:
         hostname = platform.node()
-        url = f"http://{server}:{port}/api/agents/token?hostname={hostname}"
+        url = f"{url}/api/agents/token?hostname={hostname}"
     else:
-        url = f"http://{server}:{port}/api/client/register"
+        url = f"{url}/api/client/register"
 
     # Perform POST request to SD server
     response = requests.post(url)
@@ -89,22 +67,25 @@ def get_token(server, port, compute_node_token: bool):
 if __name__ == "__main__":
     # Get arguments
     options = parse_arguments()
+    
+    # Parse configuration file
+    configuration = parse_configuration(options.config)
 
     # Get token from API
     token = get_token(
-        options.sd_server_address, options.sd_server_port, options.compute_node
+        configuration['hpcs-server']['url'], options.compute_node
     )
 
     # Overwrite configuration template
     agent_configuration_template = open("./utils/agent-on-the-fly.conf").read()
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_TRUST_DOMAIN", options.spire_trust_domain
+        "SPIRE_TRUST_DOMAIN", configuration['spire-server']['trust-domain']
     )
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_SERVER_ADDRESS", options.sd_server_address
+        "SPIRE_SERVER_ADDRESS", configuration['spire-server']['address']
     )
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_SERVER_PORT", str(options.spire_server_port)
+        "SPIRE_SERVER_PORT", configuration['spire-server']['port']
     )
     agent_configuration_template = agent_configuration_template.replace(
         "SOCKETPATH", options.socketpath

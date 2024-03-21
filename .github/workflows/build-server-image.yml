@@ -1,4 +1,4 @@
-name: Publish server docker image
+name: Build and publish HPCS server image
 on: [push]
 
 env:
