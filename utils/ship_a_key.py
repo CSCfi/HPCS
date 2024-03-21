@@ -11,6 +11,8 @@ import yaml
 from hashlib import sha512
 from ssh_utils import ssh_connect, ssh_copy_file
 
+from configparser import ConfigParser, NoSectionError, NoOptionError
+
 # Provide client_id from cli$
 # Same for trust domain
 # Get image id and transform as for server
@@ -26,6 +28,11 @@ def parse_arguments() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="CLI Options")
 
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="Path to the client configuration file",
+    )
     parser.add_argument(
         "--users",
         "-u",
@@ -83,25 +90,31 @@ def parse_arguments() -> argparse.ArgumentParser:
         help="Path to write the dataset on the supercomputer storage default :",
     )
     parser.add_argument(
-        "--sd-server-address",
-        "-a",
-        type=str,
-        help="Server address",
-    )
-    parser.add_argument(
-        "--sd-server-port",
-        "-ap",
-        type=int,
-        default=10080,
-        help="SD API server port (default: 10080)",
-    )
-    parser.add_argument(
         "--username",
         required=True,
         help="Your username on the supercomputer",
     )
 
     return parser.parse_args()
+
+# Parse configuration file
+def parse_configuration(path : str):
+    config = ConfigParser()
+    config.read(path)
+    
+    if not 'hpcs-server' in config:
+        raise NoSectionError("hpcs-server section missing in configuration file, aborting")
+    
+    if not 'vault' in config:
+        raise NoSectionError("vault section missing in configuration file, aborting")
+    
+    if not 'url' in config['hpcs-server']:
+        raise NoOptionError("'hpcs-server' section is incomplete in configuration file, aborting")
+    
+    if not 'url' in config['vault']:
+        raise NoOptionError("'vault' section is incomplete in configuration file, aborting")
+        
+    return config
 
 
 def validate_options(options: argparse.ArgumentParser):
@@ -194,7 +207,7 @@ def validate_options(options: argparse.ArgumentParser):
 
 
 def create_authorized_workloads(
-    SVID: JwtSvid, secret, server, port, users, groups, compute_nodes
+    SVID: JwtSvid, secret, url, users, groups, compute_nodes
 ):
     """Create workloads that are authorized to access to a secret
 
@@ -212,7 +225,7 @@ def create_authorized_workloads(
     """
 
     # Prepare request
-    url = f"http://{server}:{port}/api/client/create-workloads"
+    url = f"{url}/api/client/create-workloads"
     payload = {
         "jwt": SVID.token,
         "secret": secret,
@@ -248,7 +261,9 @@ def create_authorized_workloads(
 
 if __name__ == "__main__":
     # Parse arguments from CLI
-    options = parse_arguments()
+    options = parse_arguments()    
+    # Parse configuration file
+    configuration = parse_configuration(options.config)
 
     # Validate / Parse them
     (
@@ -277,15 +292,14 @@ if __name__ == "__main__":
     users_spiffeID, client_id, secrets_path, user_role = create_authorized_workloads(
         SVID,
         secret_name,
-        options.sd_server_address,
-        options.sd_server_port,
+        configuration["hpcs-server"]["url"],
         users,
         groups,
         compute_nodes,
     )
 
     # Login to the vault using client's certificate
-    hvac_client = vault_login(SVID, f"client_{client_id}")
+    hvac_client = vault_login(configuration["vault"]["url"], SVID, f"client_{client_id}")
 
     # Prepare secret
     secret = {}
@@ -329,11 +343,11 @@ if __name__ == "__main__":
     ssh_copy_file(
         ssh_client,
         "/tmp/dataset_info.yaml",
-        f"{options.data_path_at_rest}{secret_name}.info.yaml",
+        f"{options.data_path_at_rest}/{secret_name}.info.yaml",
     )
 
     print(
-        f"Data and info file were shipped to te supercomputer. Infos about the dataset are available at {options.data_path_at_rest}/{secret_name}.info.yaml"
+        f"Data and info file were shipped to te supercomputer. Info about the dataset are available at {options.data_path_at_rest}/{secret_name}.info.yaml"
     )
 
     ssh_client.close()
