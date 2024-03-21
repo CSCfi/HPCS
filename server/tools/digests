@@ -1,2 +1,3 @@
-lumi-sd/data_prep:latest
-sd-container/client:latest
+ghcr.io/cscfi/hpcs/data-prep:dockerfile_everywhere
+ghcr.io/cscfi/hpcs/container-prep:dockerfile_everywhere
+ghcr.io/cscfi/hpcs/job-prep:dockerfile_everywhere

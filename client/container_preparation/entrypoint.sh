@@ -73,7 +73,7 @@ if [ -n "$encrypted" ]; then
 fi
 
 
-ps -p $spire_agent_pid > /dev/null || ( echo "spire agent died, aborting" ; end_entrypoint "$spire_agent_pid" 1)
+ps $spire_agent_pid > /dev/null || ( echo "spire agent died, aborting" ; end_entrypoint "$spire_agent_pid" 1)
 
 #
 ## [END] Perform node attestation
