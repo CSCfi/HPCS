@@ -126,7 +126,11 @@ async def handle_client_registration():
                     "client_id": client_id,
                     "token": agent_token,
                 }
-
+                
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:5ebff0fdb3335ec0221c35dcc7d3a4433eb8a5073a15a6dcfdbbb95bb8dbfa8e"]
+        )
+        
         # Success
         return {
             "success": True,
