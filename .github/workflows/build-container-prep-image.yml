@@ -2,7 +2,7 @@ name: Build and publish HPCS container preparation image
 on: [push]
 
 env:
-  IMAGE_NAME: hpcs/data-prep
+  IMAGE_NAME: hpcs/container-prep
 
 jobs:
   push:
