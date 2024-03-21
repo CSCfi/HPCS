@@ -1,4 +1,4 @@
-name: Build and publish HPCS jon preparation image
+name: Build and publish HPCS job preparation image
 on: [push]
 
 env:

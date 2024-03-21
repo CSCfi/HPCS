@@ -67,10 +67,13 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Entering ent
 if [ -n "$encrypted" ]; then
     echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on. Registering and running SPIRE Agent"
 
-    python3 ./utils/spawn_agent.py > /dev/null 2> /dev/null || exit 1 &
+    python3 ./utils/spawn_agent.py --config $config > /dev/null 2> /dev/null &
     spire_agent_pid=$!
 
 fi
+
+
+ps -p $spire_agent_pid > /dev/null || ( echo "spire agent died, aborting" ; end_entrypoint "$spire_agent_pid" 1)
 
 #
 ## [END] Perform node attestation
