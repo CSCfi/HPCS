@@ -61,8 +61,8 @@ mkdir -p ${WORKING_DIRECTORY}
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running agent registration"
 
 # Spawn spire-agent
-cd ~/LUMI-secure-processing           || exit 1
-python3 ./utils/spawn_agent.py -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
+cd ~/HPCS           || exit 1
+python3 ./utils/spawn_agent.py --config ~/.config/hpcs-client.conf -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
 spire_agent_pid=$!
 
 # Wait until agent runs properly
@@ -85,18 +85,18 @@ echo "Logging in to the vault ..."
 
 # Log in to the vault using SVID, access role
 echo "{\"role\": \"APPLICATION_ACCESS_ROLE\", \"jwt\" : \"$svid\"}" > /tmp/login
-application_token=$(curl -s --request POST --data @/tmp/login http://${vault}/v1/auth/jwt/login | jq '.auth.client_token' -r)  || cleanup $spire_agent_pid 1
+application_token=$(curl -s --request POST --data @/tmp/login $vault/v1/auth/jwt/login | jq '.auth.client_token' -r)  || cleanup $spire_agent_pid 1
 
 echo "Getting container decryption key ..."
 
 # Use provided vault token (from login) to access secrets
-data_key=$(curl -s -H "X-Vault-Token: $application_token" http://${vault}/v1/kv/data/APPLICATION_SECRET_PATH | jq '.data.data.key' -r)    || cleanup $spire_agent_pid 1
+data_key=$(curl -s -H "X-Vault-Token: $application_token" $vault/v1/kv/data/APPLICATION_SECRET_PATH | jq '.data.data.key' -r)    || cleanup $spire_agent_pid 1
 echo "$data_key" > /tmp/container_key
 
 echo "Decrypting container image ..."
 
 # Decrypt the container image
-~/LUMI-secure-processing/client/container_preparation/input_logic/age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
+~/HPCS/client/container_preparation/input_logic/age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Creating encrypted volumes"
 
