@@ -30,6 +30,8 @@ if configuration['spire-server'].get('spire-server-bin') :
 
 if configuration['spire-server'].get('pre-command') :
     spire_interactions.pre_command = configuration['spire-server']['pre-command']
+    if configuration['spire-server']['pre-command'] == "\"\"":
+        spire_interactions.pre_command = ""
     
 # Defining the trust domain (SPIRE Trust Domain)
 trust_domain = configuration['spire-server']['trust-domain']
@@ -49,7 +51,7 @@ async def handle_dummy_token_endpoint():
     if hostname != None:
 
         # Create spiffeID based on the hostname
-        spiffeID = SpiffeId.parse(f"spiffe://{trust_domain}/h/{hostname}")
+        spiffeID = SpiffeId(f"spiffe://{trust_domain}/h/{hostname}")
 
         # Associate a token to the spiffeID
         result = token_generate(spiffeID)
@@ -87,7 +89,7 @@ async def handle_client_registration():
     write_client_policy(hvac_client, f"client_{client_id}")
 
     # Create spiffeID out of this client id
-    agent_spiffeID = SpiffeId.parse(f"spiffe://{trust_domain}/c/{client_id}")
+    agent_spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}")
 
     # Generate a token to register the agent (again, based on the client id)
     result = token_generate(agent_spiffeID)
@@ -99,7 +101,7 @@ async def handle_client_registration():
 
         # Create a spiffeID for the workloads on the client.
         # Register workloads that have to run on this agent
-        workload_spiffeID = SpiffeId.parse(
+        workload_spiffeID = SpiffeId(
             f"spiffe://{trust_domain}/c/{client_id}/workload"
         )
 
@@ -163,7 +165,7 @@ async def handle_workload_creation():
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
     # Parse the spiffeID that will access the application
-    spiffeID = SpiffeId.parse(
+    spiffeID = SpiffeId(
         f"spiffe://{trust_domain}/c/{client_id}/s/{data['secret']}"
     )
 
@@ -179,7 +181,7 @@ async def handle_workload_creation():
             groups_added = []
 
             # Compute node's agent spiffeID
-            parentID = SpiffeId.parse(f"spiffe://{trust_domain}/h/{compute_node}")
+            parentID = SpiffeId(f"spiffe://{trust_domain}/h/{compute_node}")
 
             # For each user
             if data["users"] != None:

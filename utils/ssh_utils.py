@@ -35,8 +35,8 @@ def ssh_connect(username: str) -> SSHClient:
             host,
             port,
             username=username,
-             pkey=pkey,
-             look_for_keys=False,
+            pkey=pkey,
+            look_for_keys=False,
             auth_timeout=30,
             timeout=30,
         )
