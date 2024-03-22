@@ -166,7 +166,7 @@ def validate_options(options: argparse.ArgumentParser):
 
     # Check that user provided spiffeID is well formed
     try:
-        spiffeID = spiffe_id.SpiffeId().parse(f"{options.spiffeid}")
+        spiffeID = spiffe_id.SpiffeId(f"{options.spiffeid}")
     except SpiffeIdError:
         print(f"Error, spiffeID {options.spiffeid} is malformed")
         exit(1)
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     )
 
     # Get the client's certificate to perform mTLS
-    SVID = jwt_workload_api.get_jwt_svid(audiences=["TESTING"], subject=spiffeID)
+    SVID = jwt_workload_api.fetch_svid(audiences=["TESTING"], subject=spiffeID)
 
     # Perform workloads authorization for the secret to be created
     users_spiffeID, client_id, secrets_path, user_role = create_authorized_workloads(
