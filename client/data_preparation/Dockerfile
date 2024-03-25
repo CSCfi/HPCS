@@ -20,7 +20,7 @@ RUN tar xvf spire-1.9.1-linux-amd64-musl.tar.gz ; mv spire-1.9.1 /opt ; mv /opt/
 RUN ln -s /opt/spire/bin/spire-agent /usr/bin/spire-agent
 
 # Install pyspiffe package
-RUN pip install git+https://github.com/HewlettPackard/py-spiffe.git
+RUN pip install git+https://github.com/HewlettPackard/py-spiffe.git@3640af9d6629c05e027f99010abc934cb74122a8
 
 # Create code directory, output directory
 RUN mkdir /data_preparation /output
