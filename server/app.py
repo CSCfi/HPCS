@@ -128,9 +128,20 @@ async def handle_client_registration():
                     "client_id": client_id,
                     "token": agent_token,
                 }
-                
+        
+        # Spire-Agent binary        
         result = entry_create(
             agent_spiffeID, workload_spiffeID, ["unix:sha256:5ebff0fdb3335ec0221c35dcc7d3a4433eb8a5073a15a6dcfdbbb95bb8dbfa8e"]
+        )
+        
+        # Python 3.9 binary        
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:956a50083eb7a58240fea28ac52ff39e9c04c5c74468895239b24bdf4760bffe"]
+        )
+        
+        # Qemu x86_64 (For docker mac) // Could add Rosetta binary
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:3fc6c8fbd8fe429b67276854fbb5ae594118f7f0b10352a508477833b04ee9b7"]
         )
         
         # Success
