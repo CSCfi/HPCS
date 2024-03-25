@@ -1,6 +1,6 @@
-from tools.docker.docker_utils import check_docker_socket_access
-from lib.image_build import build_prepared_image, create_sif_image
-from tools.cli.cli import parse_arguments
+from client.container_preparation.tools.docker.docker_utils import check_docker_socket_access
+from client.container_preparation.lib.image_build import build_prepared_image, create_sif_image
+from client.container_preparation.tools.cli.cli import parse_arguments
 from docker import DockerClient
 
 

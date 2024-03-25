@@ -1,5 +1,5 @@
 import platform, argparse, subprocess, requests
-from conf.client.conf import parse_configuration
+from utils.conf.client.conf import parse_configuration
 
 
 # Parse arguments from the cli

@@ -1,10 +1,6 @@
-from utils.cli.cli import parse_arguments, check_arguments
-from lib.sbatch_generation import sbatch_from_template
-from lib.info_file import get_info_from_infofile
-import sys, os
-
-sys.path.append(os.path.expanduser("../../../"))  # For cli usage
-sys.path.append(os.path.expanduser("../../"))  # For inside-container usage
+from  client.job_preparation.utils.cli.cli import parse_arguments, check_arguments
+from client.job_preparation.lib.sbatch_generation import sbatch_from_template
+from client.job_preparation.lib.info_file import get_info_from_infofile
 from utils.ssh_utils import ssh_connect, ssh_copy_file, ssh_run_command
 from utils.conf.client.conf import parse_configuration
 from time import sleep

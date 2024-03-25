@@ -1,16 +1,19 @@
 import argparse
+import requests
+import yaml
+
 from re import search
 from os import path
+
 from pyspiffe.workloadapi import default_jwt_source, default_workload_api_client
 from pyspiffe.spiffe_id import spiffe_id
 from pyspiffe.exceptions import SpiffeIdError
 from pyspiffe.svid.jwt_svid import JwtSvid
-import requests
-from vault.vault_utils import vault_login, write_secret
-import yaml
 from hashlib import sha512
-from ssh_utils import ssh_connect, ssh_copy_file
-from conf.client.conf import parse_configuration
+
+from utils.vault.vault_utils import vault_login, write_secret
+from utils.ssh_utils import ssh_connect, ssh_copy_file
+from utils.conf.client.conf import parse_configuration
 
 # Provide client_id from cli$
 # Same for trust domain
