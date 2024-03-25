@@ -67,9 +67,11 @@ def entry_create(
     return subprocess.run(command, capture_output=True)
 
 
-def get_server_identity_JWT() -> JwtSvid:
+def get_server_identity_JWT(JwtSource : default_jwt_source.DefaultJwtSource) -> JwtSvid:
     """Get jwt SVID of the server
 
+    Args:
+        JwtSource (default_jwt_source.DefaultJwtSource): connection to the spire agent workload api
     Returns:
         JwtSvid: the SVID
     """
@@ -82,28 +84,32 @@ def get_server_identity_JWT() -> JwtSvid:
     return SVID
 
 
-def validate_JWT_SVID(JwtSVID: str) -> JwtSvid:
+def validate_JWT_SVID(JwtSource : default_jwt_source.DefaultJwtSource, JwtSVID: str) -> JwtSvid:
     """Validate a provided JWT SVID against spire-agent
 
+    Args:
+        JwtSource (default_jwt_source.DefaultJwtSource): connection to the spire agent workload api
+        
     Returns:
         JwtSvid: parsed and validated SVID
     """
-    return jwt_workload_api._workload_api_client.validate_jwt_svid(
+    return JwtSource._workload_api_client.validate_jwt_svid(
         JwtSVID, audience="TESTING"
     )
 
 
-def validate_client_JWT_SVID(JwtSVID: str, client_id: str) -> bool:
+def validate_client_JWT_SVID(JwtSource : default_jwt_source.DefaultJwtSource, JwtSVID: str, client_id: str) -> bool:
     """Validate a client JWT, same as `validate_JWT_SVID` plus client_id verification
 
     Args:
+        JwtSource (default_jwt_source.DefaultJwtSource): connection to the spire agent workload api
         JwtSVID (str): the client's JWT SVID
         client_id (str): the client's id
 
     Returns:
         bool: JWT SVID is valide and matches client id or not
     """
-    SVID = validate_JWT_SVID(JwtSVID)
+    SVID = validate_JWT_SVID(JwtSource, JwtSVID)
     if str(SVID.spiffe_id).split("/")[-2] != client_id:
         return False
     return True

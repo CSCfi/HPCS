@@ -1,6 +1,6 @@
 from dockerfile_parse import DockerfileParser
 import os, sys
-from tools.docker.docker_utils import build_build_env, check_build_env_exists
+from client.container_preparation.tools.docker.docker_utils import build_build_env, check_build_env_exists
 
 sys.path.append(os.path.expanduser("../../../"))  # For cli usage
 sys.path.append(os.path.expanduser("../../"))  # For inside-container usage

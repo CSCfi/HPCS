@@ -1,5 +1,4 @@
-from tools.cli.cli import parse_arguments
-from tools.utils import check_arguments
+from client.data_preparation.tools.cli.cli import parse_arguments, check_arguments
 from pyrage import x25519, encrypt
 from os import path, remove
 import tarfile

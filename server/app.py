@@ -1,17 +1,18 @@
-import hashlib, sys, os
+import hashlib
 from quart import Quart, jsonify, request
-from lib.spire_interactions import (
+from pyspiffe.spiffe_id.spiffe_id import SpiffeId
+from pyspiffe.spiffe_id.spiffe_id import SpiffeId
+
+from server.lib.spire_interactions import (
     token_generate,
     entry_create,
     get_server_identity_JWT,
     validate_client_JWT_SVID,
 )
-from lib  import spire_interactions
-from tools.docker_utils import get_build_env_image_digests
-from pyspiffe.spiffe_id.spiffe_id import SpiffeId
-
-from tools.config.config import parse_configuration
-from tools.cli.cli import parse_arguments
+from server.lib  import spire_interactions
+from server.tools.docker_utils import get_build_env_image_digests
+from server.tools.config.config import parse_configuration
+from server.tools.cli.cli import parse_arguments
 from utils.vault.vault_utils import (
     vault_login,
     write_client_policy,
@@ -22,22 +23,24 @@ from utils.vault.vault_utils import (
 
 app = Quart(__name__)
 
-options = parse_arguments()
-configuration = parse_configuration(options.config)
-
-if configuration['spire-server'].get('spire-server-bin') :
-    spire_interactions.spire_server_bin = configuration['spire-server']['spire-server-bin']
-
-if configuration['spire-server'].get('pre-command') :
-    spire_interactions.pre_command = configuration['spire-server']['pre-command']
-    if configuration['spire-server']['pre-command'] == "\"\"":
-        spire_interactions.pre_command = ""
+if __name__ == "__main__":
     
-# Defining the trust domain (SPIRE Trust Domain)
-trust_domain = configuration['spire-server']['trust-domain']
+    options = parse_arguments()
+    configuration = parse_configuration(options.config)
 
-# Perform vault login, to be able to run later operations against vault
-hvac_client = vault_login(configuration['vault']['url'], get_server_identity_JWT(), configuration['vault']['server-role'])
+    if configuration['spire-server'].get('spire-server-bin') :
+        spire_interactions.spire_server_bin = configuration['spire-server']['spire-server-bin']
+
+    if configuration['spire-server'].get('pre-command') :
+        spire_interactions.pre_command = configuration['spire-server']['pre-command']
+        if configuration['spire-server']['pre-command'] == "\"\"":
+            spire_interactions.pre_command = ""
+        
+    # Defining the trust domain (SPIRE Trust Domain)
+    trust_domain = configuration['spire-server']['trust-domain']
+
+    # Perform vault login, to be able to run later operations against vault
+    hvac_client = vault_login(configuration['vault']['url'], get_server_identity_JWT(), configuration['vault']['server-role'])
 
 
 # Dummy endpoint that handles the registration of compute nodes.
