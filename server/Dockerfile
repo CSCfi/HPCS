@@ -13,7 +13,7 @@ RUN ln -s /opt/spire/bin/spire-agent /usr/bin/spire-agent
 RUN ln -s /opt/spire/bin/spire-server /usr/bin/spire-server
 
 # Install pyspiffe package
-RUN pip install git+https://github.com/HewlettPackard/py-spiffe.git
+RUN pip install git+https://github.com/HewlettPackard/py-spiffe.git@3640af9d6629c05e027f99010abc934cb74122a8
 
 # Copy server
 RUN mkdir /server
