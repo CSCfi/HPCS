@@ -312,3 +312,58 @@ docker-compose run server
 ```
 
 ## Limitations
+
+Currently still under development this project has been developped using LUMI's environment. The philosophy of it aims to limit as possible the need of supercomputer's administrators. Even though it makes it easier to adapt to other environments, it also means that some supercomputer's limitations can prevent HPCS to achieve it's full potential.
+
+### Node attestation
+
+This project enable users to chose who can read their data or containers based on UNIX identities on the super-computer platform. Another important feature is the possibility for them to limit this access to a specific set of node on the supercomputer site. However, this feature requires the attestation of the nodes.
+
+[Several methods of attestation](https://github.com/spiffe/spire/tree/main/doc) exists using Spire HPCS mainly benefits from these :
+- Token based attestation (user provides a token that is pre-registered to attest the node using it).
+- Slurm based attestation (nothing done, need first to make sure that slurm is a trustable source of informations to attest the node).
+- TPM based attestation ([with DevID](https://github.com/spiffe/spire/blob/main/doc/plugin_agent_nodeattestor_tpm_devid.md) or [without](https://github.com/boxboat/spire-tpm-plugin)).
+- Other hardware based key management based attestation (ex : [sev-snp](https://github.com/ufcg-lsd/spire-amd-sev-snp-node-attestor), in the future).
+
+Using TPM, for example, it's very easy to run automatic node attestation, based on hardware managed keys that can't be easily spoofed. Unfortunately, LUMI's premise doesn't provide TPM at the moment and for this reason, node attestation is currently made using a dummy endpoint providing join tokens to anyone. However, this behaviour could easily be modified to strenghten the node attestation with very low code modification for other supercomputers.
+
+### Encrypted container
+
+This project leverage Singularity / Apptainer 's [encrypted containers](https://docs.sylabs.io/guides/3.4/user-guide/encryption.html). This feature provides to the final user a way of protecting the runtime of the container, allowing it to protect data from every interactions of the container with the outside world. 
+
+Unfortunately, for LUMI, this feature relies on different technologies, depending the permission level at which the container is encrypted, this behaviour is documented in the following table for usage on LUMI :
+
+| Build \ Run | root ? | singularity-ce version 3.11.4-1 (LUMI) | apptainer version 1.2.5 (Binary able to be shipped to LUMI) |
+| --- | --- | --- | --- |
+| singularity-ce version 3.11.4 | yes | Unable to decrypt filesystem (no dm_crypt) | Failure (says user namespaces are needed) |
+| singularity-ce version 3.11.4 | no | doesn’t build | doesn’t build |
+| apptainer version 1.2.5 | yes | Unable to decrypt filesystem (no dm_crypt) | Failure (says user namespaces are needed) |
+| apptainer version 1.2.5 | no | Filesystem not recognized | Failure (says user namespaces are needed) |
+
+Two main reasons to the issues with the encrypted containers :
+- Cannot run as root on a node (no workaround, completely normal)
+- User namespaces are disabled on LUMI (for secure reason, [this stackexchange](https://security.stackexchange.com/questions/267628/user-namespaces-do-they-increase-security-or-introduce-new-attack-surface) has some explanations).
+  
+At the end of the day, to secure container's runtime, we would need to open a relative potential breach (by enabling user namespaces on the platform), which isn't so logical and seems not to be possible on some platforms (LUMI, f.e).
+
+Our mitigation to the lack of confidentiality that leaves the unavailability of encrypted containers works in two steps :
+- Encryption of the container at rest (encryption of the image file while stored on the supercomputer, decryption right before runtime)
+- Usage of encrypted FUSE Filesystems in the container. This is achieved using `gocryptfs` (actually the same way as Singularity does it for encrypted containers) but only for some mountpoints. This for example allows us to certify that the input dataset won't ever be written as plaintext on the node as well as the output data.
+
+However, again, this limitation has known solutions (cf. user namespaces) that will be leveraged or not on the platforms. The code was originally written to work with encrypted containers and this code is currently commented out but still available in case of usage on platform supporting user namespaces. Another lead that hasn't been explored as of today is [the newest version of Apptainer](https://github.com/apptainer/apptainer/releases/tag/v1.3.0), introducing new behaviour based on setuid.
+
+### Client attestation
+
+When a client shows up to encrypt it's data or container and to give access to it to someone, it's automatically attested, based on it's public IP. A workload identity is then automatically created, based on the `sha256sum` of the binary calling the workload API or the image_id of the container where the workload is running (See #5). This behaviour represents a problem because this attestation method isn't appliable to every clients :
+- Client runs containers using cgroupsv1
+  - Fine, the docker image_id can be used. However, this image_id can be spoofed
+- Client runs containers using cgroupsv2
+  - Client runs on Linux
+    - `spire-agent api fetch` can be attested using spire-agent binary's `sha256sum`
+    - `python3 ./utils/spawn_agent.py` can't be attested since the `sha256sum` recognised by the workload API is `python3`'s. A mitigation to that would be to compile the code, if possible. This would potentially provide a unique binary that would then be able to be attested using `sha256sum` 
+  - Client runs on MacOS
+    - No attestation is doable at the moment since MacOS doesn't support docker and runs container inside of a Linux VM
+      - Using cgroupsv2
+      - Replacing every calling binary by the hypervisor
+
+Since this limitation doesn't represent a confidentiality issue (a client isn't ever provided more than a write-only permission), current mitigations are more practical than secure (again, see #5).
