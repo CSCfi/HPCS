@@ -13,7 +13,7 @@ This partnership project involving CSC and Hewlett Packard Enterprise aims to en
 
 ### Architecture
 
-In-depth architecture documentation is available [here](https://github.com/CSCfi/HPCS/docs/architecture)
+In-depth architecture documentation is available [here](https://github.com/CSCfi/HPCS/docs/architecture/architecture.md)
 
 ## Demonstration
 

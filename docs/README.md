@@ -4,4 +4,5 @@ In-depth documentations are available in this directory.
 
 ## Architecture
 
-See [architecture documentation](https://github.com/CSCfi/HPCS/tree/doc/readme_and_sequence_diagrams/docs/architecture.md).
+An overview and an in-depth diagram of the architecture is available [here](https://github.com/CSCfi/HPCS/tree/doc/readme_and_sequence_diagrams/docs/architecture/architecture.md).
+You can also see sequence diagrams for the [container preparation](https://github.com/CSCfi/HPCS/tree/doc/readme_and_sequence_diagrams/docs/architecture/container_preparation.md), [data preparation](https://github.com/CSCfi/HPCS/tree/doc/readme_and_sequence_diagrams/docs/architecture/data_preparation.md) and [job preparation (and runtime)](https://github.com/CSCfi/HPCS/tree/doc/readme_and_sequence_diagrams/docs/architecture/job_preparation.md).
