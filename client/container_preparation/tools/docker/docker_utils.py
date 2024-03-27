@@ -1,7 +1,7 @@
 import docker, os
 
 
-def check_build_env_exists(docker_client : docker.DockerClient):
+def check_build_env_exists(docker_client: docker.DockerClient):
     """Verify that the build environment (docker image sd-container/build_env) exists.
 
     Returns:
@@ -14,7 +14,7 @@ def check_build_env_exists(docker_client : docker.DockerClient):
         return False
 
 
-def build_build_env(docker_client : docker.DockerClient):
+def build_build_env(docker_client: docker.DockerClient):
     """Builds the build environment"""
     docker_client.images.build(
         path=f"{os.path.realpath(os.path.dirname(__file__))}/build_env",

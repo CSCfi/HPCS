@@ -145,7 +145,7 @@ def create_sif_image(
             user=os.getuid(),
             group_add=[f"{os.stat(docker_socket_path).st_gid}"],
         )
-        
+
     # Keeping the if/else for easy code rollback if encrypted containers can be used (that's why we don't have only one "docker_client.containers.run()")
     else:
         docker_client.containers.run(

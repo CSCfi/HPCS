@@ -6,7 +6,7 @@ from lib.spire_interactions import (
     get_server_identity_JWT,
     validate_client_JWT_SVID,
 )
-from lib  import spire_interactions
+from lib import spire_interactions
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
 
@@ -25,19 +25,25 @@ app = Quart(__name__)
 options = parse_arguments()
 configuration = parse_configuration(options.config)
 
-if configuration['spire-server'].get('spire-server-bin') :
-    spire_interactions.spire_server_bin = configuration['spire-server']['spire-server-bin']
+if configuration["spire-server"].get("spire-server-bin"):
+    spire_interactions.spire_server_bin = configuration["spire-server"][
+        "spire-server-bin"
+    ]
 
-if configuration['spire-server'].get('pre-command') :
-    spire_interactions.pre_command = configuration['spire-server']['pre-command']
-    if configuration['spire-server']['pre-command'] == "\"\"":
+if configuration["spire-server"].get("pre-command"):
+    spire_interactions.pre_command = configuration["spire-server"]["pre-command"]
+    if configuration["spire-server"]["pre-command"] == '""':
         spire_interactions.pre_command = ""
-    
+
 # Defining the trust domain (SPIRE Trust Domain)
-trust_domain = configuration['spire-server']['trust-domain']
+trust_domain = configuration["spire-server"]["trust-domain"]
 
 # Perform vault login, to be able to run later operations against vault
-hvac_client = vault_login(configuration['vault']['url'], get_server_identity_JWT(), configuration['vault']['server-role'])
+hvac_client = vault_login(
+    configuration["vault"]["url"],
+    get_server_identity_JWT(),
+    configuration["vault"]["server-role"],
+)
 
 
 # Dummy endpoint that handles the registration of compute nodes.
@@ -101,9 +107,7 @@ async def handle_client_registration():
 
         # Create a spiffeID for the workloads on the client.
         # Register workloads that have to run on this agent
-        workload_spiffeID = SpiffeId(
-            f"spiffe://{trust_domain}/c/{client_id}/workload"
-        )
+        workload_spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}/workload")
 
         # Write the role bound to the workload's spiffeID
         write_client_role(hvac_client, f"client_{client_id}", workload_spiffeID)
@@ -128,22 +132,34 @@ async def handle_client_registration():
                     "client_id": client_id,
                     "token": agent_token,
                 }
-        
-        # Spire-Agent binary        
+
+        # Spire-Agent binary
         result = entry_create(
-            agent_spiffeID, workload_spiffeID, ["unix:sha256:5ebff0fdb3335ec0221c35dcc7d3a4433eb8a5073a15a6dcfdbbb95bb8dbfa8e"]
+            agent_spiffeID,
+            workload_spiffeID,
+            [
+                "unix:sha256:5ebff0fdb3335ec0221c35dcc7d3a4433eb8a5073a15a6dcfdbbb95bb8dbfa8e"
+            ],
         )
-        
-        # Python 3.9 binary        
+
+        # Python 3.9 binary
         result = entry_create(
-            agent_spiffeID, workload_spiffeID, ["unix:sha256:956a50083eb7a58240fea28ac52ff39e9c04c5c74468895239b24bdf4760bffe"]
+            agent_spiffeID,
+            workload_spiffeID,
+            [
+                "unix:sha256:956a50083eb7a58240fea28ac52ff39e9c04c5c74468895239b24bdf4760bffe"
+            ],
         )
-        
+
         # Qemu x86_64 (For docker mac) // Could add Rosetta binary
         result = entry_create(
-            agent_spiffeID, workload_spiffeID, ["unix:sha256:3fc6c8fbd8fe429b67276854fbb5ae594118f7f0b10352a508477833b04ee9b7"]
+            agent_spiffeID,
+            workload_spiffeID,
+            [
+                "unix:sha256:3fc6c8fbd8fe429b67276854fbb5ae594118f7f0b10352a508477833b04ee9b7"
+            ],
         )
-        
+
         # Success
         return {
             "success": True,
@@ -176,9 +192,7 @@ async def handle_workload_creation():
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
     # Parse the spiffeID that will access the application
-    spiffeID = SpiffeId(
-        f"spiffe://{trust_domain}/c/{client_id}/s/{data['secret']}"
-    )
+    spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}/s/{data['secret']}")
 
     # Check that the SVID correspond to the client_id (Can be removed if developper is certified)
     if validate_client_JWT_SVID(data["jwt"], client_id):

@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: 'true'
+          lfs: "true"
 
       - name: Build image
         run: git lfs pull ; docker build . -f ./client/data_preparation/Dockerfile -t $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
@@ -33,7 +33,7 @@ jobs:
 
           # This strips the "v" prefix from the tag name.
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          
+
           # This uses the Docker `latest` tag convention.
           [ "$VERSION" == "main" ] && VERSION=latest
           echo IMAGE_ID=$IMAGE_ID
