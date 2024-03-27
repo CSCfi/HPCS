@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 ## This entrypoint wraps up the Data preparation with the agent spawning and the key shipping.
 #
@@ -7,6 +7,7 @@
 parse_args() {
     while [[ "$#" -gt 0 ]]; do
         case "$1" in
+            --config) config="$2"; shift 2 ;;
             -i|--input-data) input_data="$2"; shift 2 ;;
             -o|--output-data) output_data="$2"; shift 2 ;;
             --data-path) data_path="$2"; shift 2 ;;
@@ -21,7 +22,7 @@ parse_args() {
     done
 
     # Check for required arguments
-    if [ -z "$input_data" ] || [ -z "$output_data" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || [ -z "$username" ] || ( [ -z "$users" ] && [ -z "$groups" ] ) || [ -z "$compute_nodes" ]; then
+    if [ -z "$config" ] || [ -z "$input_data" ] || [ -z "$output_data" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || [ -z "$username" ] || ( [ -z "$users" ] && [ -z "$groups" ] ) || [ -z "$compute_nodes" ]; then
         echo echo "Please provides options for both of these programs : "
         python3 ./prepare_data.py --help
         python3 ./utils/ship_a_key.py --help
@@ -57,14 +58,19 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Entering entrypoi
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Registering and running SPIRE Agent"
 
-python3 ./utils/spawn_agent.py > /dev/null 2> /dev/null || exit 1  &
+python3 ./utils/spawn_agent.py --config $config > /dev/null 2> /dev/null &
 spire_agent_pid=$!
 
 until [ -e /tmp/agent.sock ]
 do
     echo -e "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
     sleep 10
+    if ! ps | grep $spire_agent_pid > /dev/null ; then
+        echo "spire agent died, aborting"
+        end_entrypoint "$spire_agent_pid" 1
+    fi
 done
+
 
 #
 ## [END] Perform node attestation
@@ -96,13 +102,13 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Writing key to th
 # Handle different cases of user provided compute nodes / user / groups
 if [ -z "$users" ]; then
     # If the user provided only groups
-    python3 ./utils/ship_a_key.py --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+    python3 ./utils/ship_a_key.py --config $config --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 elif [ -z "$groups" ] ; then
     # If the user provided only users
-    python3 ./utils/ship_a_key.py --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+    python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 else
     # If the user provided both
-    python3 ./utils/ship_a_key.py --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+    python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 fi
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Key written to the vault"

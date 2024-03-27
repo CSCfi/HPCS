@@ -10,6 +10,7 @@ from vault.vault_utils import vault_login, write_secret
 import yaml
 from hashlib import sha512
 from ssh_utils import ssh_connect, ssh_copy_file
+from conf.client.conf import parse_configuration
 
 # Provide client_id from cli$
 # Same for trust domain
@@ -26,6 +27,12 @@ def parse_arguments() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="CLI Options")
 
+    parser.add_argument(
+        "--config",
+        required=True,
+        default="/tmp/hpcs-client.conf",
+        help="Configuration file (INI Format) (default: /tmp/hpcs-client.conf)",
+    )
     parser.add_argument(
         "--users",
         "-u",
@@ -81,19 +88,6 @@ def parse_arguments() -> argparse.ArgumentParser:
         required=True,
         type=str,
         help="Path to write the dataset on the supercomputer storage default :",
-    )
-    parser.add_argument(
-        "--sd-server-address",
-        "-a",
-        type=str,
-        help="Server address",
-    )
-    parser.add_argument(
-        "--sd-server-port",
-        "-ap",
-        type=int,
-        default=10080,
-        help="SD API server port (default: 10080)",
     )
     parser.add_argument(
         "--username",
@@ -172,7 +166,7 @@ def validate_options(options: argparse.ArgumentParser):
 
     # Check that user provided spiffeID is well formed
     try:
-        spiffeID = spiffe_id.SpiffeId().parse(f"{options.spiffeid}")
+        spiffeID = spiffe_id.SpiffeId(f"{options.spiffeid}")
     except SpiffeIdError:
         print(f"Error, spiffeID {options.spiffeid} is malformed")
         exit(1)
@@ -194,7 +188,7 @@ def validate_options(options: argparse.ArgumentParser):
 
 
 def create_authorized_workloads(
-    SVID: JwtSvid, secret, server, port, users, groups, compute_nodes
+    SVID: JwtSvid, secret, url, users, groups, compute_nodes
 ):
     """Create workloads that are authorized to access to a secret
 
@@ -212,7 +206,7 @@ def create_authorized_workloads(
     """
 
     # Prepare request
-    url = f"http://{server}:{port}/api/client/create-workloads"
+    url = f"{url}/api/client/create-workloads"
     payload = {
         "jwt": SVID.token,
         "secret": secret,
@@ -248,7 +242,10 @@ def create_authorized_workloads(
 
 if __name__ == "__main__":
     # Parse arguments from CLI
-    options = parse_arguments()
+    options = parse_arguments()    
+    
+    # Parse configuration file
+    configuration = parse_configuration(options.config)
 
     # Validate / Parse them
     (
@@ -271,21 +268,20 @@ if __name__ == "__main__":
     )
 
     # Get the client's certificate to perform mTLS
-    SVID = jwt_workload_api.get_jwt_svid(audiences=["TESTING"], subject=spiffeID)
+    SVID = jwt_workload_api.fetch_svid(audiences=["TESTING"], subject=spiffeID)
 
     # Perform workloads authorization for the secret to be created
     users_spiffeID, client_id, secrets_path, user_role = create_authorized_workloads(
         SVID,
         secret_name,
-        options.sd_server_address,
-        options.sd_server_port,
+        configuration["hpcs-server"]["url"],
         users,
         groups,
         compute_nodes,
     )
 
     # Login to the vault using client's certificate
-    vault_login(SVID, f"client_{client_id}")
+    hvac_client = vault_login(configuration["vault"]["url"], SVID, f"client_{client_id}")
 
     # Prepare secret
     secret = {}
@@ -293,7 +289,7 @@ if __name__ == "__main__":
         secret["key"] = pem.read()
 
     # Write secret to the vault
-    write_secret(secrets_path, secret)
+    write_secret(hvac_client, secrets_path, secret)
 
     print(
         f"Key successfully written to the vault. Users needs the role {user_role} to access the secret stored at {secrets_path}"
@@ -329,11 +325,11 @@ if __name__ == "__main__":
     ssh_copy_file(
         ssh_client,
         "/tmp/dataset_info.yaml",
-        f"{options.data_path_at_rest}{secret_name}.info.yaml",
+        f"{options.data_path_at_rest}/{secret_name}.info.yaml",
     )
 
     print(
-        f"Data and info file were shipped to te supercomputer. Infos about the dataset are available at {options.data_path_at_rest}/{secret_name}.info.yaml"
+        f"Data and info file were shipped to te supercomputer. Info about the dataset are available at {options.data_path_at_rest}/{secret_name}.info.yaml"
     )
 
     ssh_client.close()

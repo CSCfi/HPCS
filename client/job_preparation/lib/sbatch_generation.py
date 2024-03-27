@@ -44,7 +44,8 @@ def boostrap_from_template(options: argparse.Namespace, template_path: str) -> s
         sbatch = sbatch.replace("ACCOUNT", options.account)
         sbatch = sbatch.replace("NODELIST", options.nodelist)
         sbatch = sbatch.replace("WORKDIR", options.workdir)
-        sbatch = sbatch.replace("TRUST_DOMAIN", "lumi-sd-dev")
+        sbatch = sbatch.replace("TRUST_DOMAIN", options.trust_domain)
+        sbatch = sbatch.replace("VAULT_ADDRESS", options.vault_address)
 
         # Dataset info
         sbatch = sbatch.replace("DATA_PATH", options.data_path_at_rest)

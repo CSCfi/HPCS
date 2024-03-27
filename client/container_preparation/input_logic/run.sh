@@ -7,10 +7,10 @@ PATH="$PATH:/sd-container/tools/input_logic/"
 echo "[SD-Container][Input-Logic] : Getting data decryption key from vault"
 
 # Get token via vault login. The data_login environment variable need to be exported from calling script
-data_token=$(curl -s --request POST --data "$data_login" http://${vault}/v1/auth/jwt/login | jq '.auth.client_token' -r)  || exit 1
+data_token=$(curl -s --request POST --data "$data_login" $vault/v1/auth/jwt/login | jq '.auth.client_token' -r)  || exit 1
 
 # Use the token to access the key. The data_path environment variable needs to be exported from calling script
-data_key=$(curl -s -H "X-Vault-Token: $data_token" http://${vault}/v1/kv/data/${data_path} | jq '.data.data.key' -r)    || exit 1
+data_key=$(curl -s -H "X-Vault-Token: $data_token" $vault/v1/kv/data/${data_path} | jq '.data.data.key' -r)    || exit 1
 
 # Write the key in an encrypted volume
 echo "$data_key" > /sd-container/encrypted/decryption_key
