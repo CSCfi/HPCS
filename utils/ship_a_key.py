@@ -242,8 +242,8 @@ def create_authorized_workloads(
 
 if __name__ == "__main__":
     # Parse arguments from CLI
-    options = parse_arguments()    
-    
+    options = parse_arguments()
+
     # Parse configuration file
     configuration = parse_configuration(options.config)
 
@@ -281,7 +281,9 @@ if __name__ == "__main__":
     )
 
     # Login to the vault using client's certificate
-    hvac_client = vault_login(configuration["vault"]["url"], SVID, f"client_{client_id}")
+    hvac_client = vault_login(
+        configuration["vault"]["url"], SVID, f"client_{client_id}"
+    )
 
     # Prepare secret
     secret = {}

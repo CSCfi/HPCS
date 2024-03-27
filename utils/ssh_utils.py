@@ -30,7 +30,7 @@ def ssh_connect(username: str) -> SSHClient:
 
     # Probably running in a container
     except SSHException:
-        pkey=RSAKey.from_private_key_file("/tmp/.ssh/id_rsa")
+        pkey = RSAKey.from_private_key_file("/tmp/.ssh/id_rsa")
         client.connect(
             host,
             port,

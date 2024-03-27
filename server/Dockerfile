@@ -1,32 +1,30 @@
 # Using Python original Docker image
-FROM --platform=linux/amd64 python:3.9-alpine
+ARG  BUILDPLATFORM=linux/amd64
+FROM --platform=$BUILDPLATFORM python:3.9-alpine
 
-RUN apk add \
-    git \
-    build-base \
-    openssl
-
-# Install spire-agent
-RUN wget -q https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz
-RUN tar xvf spire-1.9.0-linux-amd64-musl.tar.gz ; mv spire-1.9.0 /opt ; mv /opt/spire-1.9.0 /opt/spire
-RUN ln -s /opt/spire/bin/spire-agent /usr/bin/spire-agent
-RUN ln -s /opt/spire/bin/spire-server /usr/bin/spire-server
-
-# Install pyspiffe package
-RUN pip install git+https://github.com/HewlettPackard/py-spiffe.git@3640af9d6629c05e027f99010abc934cb74122a8
+# Install necessary packages and spire-agent
+RUN apk add --no-cache \
+    git=2.43.0-r0 \
+    build-base=0.5-r3 \
+    openssl=3.1.4-r5 && \
+wget -q https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz && \
+tar xvf spire-1.9.0-linux-amd64-musl.tar.gz ; mv spire-1.9.0 /opt ; mv /opt/spire-1.9.0 /opt/spire && \
+ln -s /opt/spire/bin/spire-agent /usr/bin/spire-agent && \
+ln -s /opt/spire/bin/spire-server /usr/bin/spire-server && \
+rm -rf spire-1.9.0-linux-amd64-musl.tar.gz
 
 # Copy server
-RUN mkdir /server
 COPY ./server /server
-
-# Install dependencies
-RUN cd /server && pip install -r ./requirements.txt
-
-# Copy utils
-COPY ./utils /server/utils
 
 # Set workdir
 WORKDIR /server
+
+# Install dependencies
+RUN pip install --no-cache-dir -r ./requirements.txt && \
+pip install --no-cache-dir git+https://github.com/HewlettPackard/py-spiffe.git@3640af9d6629c05e027f99010abc934cb74122a8
+
+# Copy utils
+COPY ./utils /server/utils
 
 # Set entrypoint
 ENTRYPOINT [ "./entrypoint.sh" ]
