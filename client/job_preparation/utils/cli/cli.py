@@ -11,11 +11,11 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="CLI Optinons")
 
     parser.add_argument(
-        "--username",
-        "-u",
-        required=True,
+        "--config",
         type=str,
-        help="username on supercomputer",
+        required=True,
+        default="/tmp/hpcs-client.conf",
+        help="Configuration file (INI Format) (default: /tmp/hpcs-client.conf)",
     )
     parser.add_argument(
         "--job-name",

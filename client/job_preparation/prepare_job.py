@@ -6,12 +6,24 @@ import sys, os
 sys.path.append(os.path.expanduser("../../../"))  # For cli usage
 sys.path.append(os.path.expanduser("../../"))  # For inside-container usage
 from utils.ssh_utils import ssh_connect, ssh_copy_file, ssh_run_command
+from utils.conf.client.conf import parse_configuration
 from time import sleep
 from pyrage import x25519
 
 if __name__ == "__main__":
     # Parse arguments
-    options = check_arguments(parse_arguments())
+    options = parse_arguments()
+
+    # Parse configuration
+    configuration = parse_configuration(options.config)
+    
+    # Parse configuration as options
+    options.username = configuration['supercomputer']['username']
+    options.trust_domain = configuration['spire-server']['trust-domain']
+    options.vault_address = configuration['vault']['url']
+    
+    # Check arguments
+    options = check_arguments(options)
 
     # Connect via SSH to supercomputer
     ssh_client = ssh_connect(options.username)
@@ -39,6 +51,9 @@ if __name__ == "__main__":
 
     # Copy SBATCH to supercomputer
     ssh_copy_file(ssh_client, sbatch_path, f"~/")
+    
+    # Copy config file to supercomputer
+    ssh_copy_file(ssh_client, options.config, f"~/.config/hpcs-client.conf")
 
     # Create public encryption key for output data
     ident = x25519.Identity.generate()
@@ -48,7 +63,7 @@ if __name__ == "__main__":
         public_key_file.write(str(ident.to_public()))
 
     # Write private key to current directory
-    with open("./private_key", "w+") as private_key_file:
+    with open("/tmp/private_key", "w+") as private_key_file:
         private_key_file.write(str(ident))
 
     # Copy public key to supercomputer

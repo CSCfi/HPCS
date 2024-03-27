@@ -6,10 +6,12 @@ from lib.spire_interactions import (
     get_server_identity_JWT,
     validate_client_JWT_SVID,
 )
+from lib  import spire_interactions
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
 
-sys.path.append(os.path.expanduser("../"))
+from tools.config.config import parse_configuration
+from tools.cli.cli import parse_arguments
 from utils.vault.vault_utils import (
     vault_login,
     write_client_policy,
@@ -20,11 +22,22 @@ from utils.vault.vault_utils import (
 
 app = Quart(__name__)
 
+options = parse_arguments()
+configuration = parse_configuration(options.config)
+
+if configuration['spire-server'].get('spire-server-bin') :
+    spire_interactions.spire_server_bin = configuration['spire-server']['spire-server-bin']
+
+if configuration['spire-server'].get('pre-command') :
+    spire_interactions.pre_command = configuration['spire-server']['pre-command']
+    if configuration['spire-server']['pre-command'] == "\"\"":
+        spire_interactions.pre_command = ""
+    
 # Defining the trust domain (SPIRE Trust Domain)
-trust_domain = "lumi-sd-dev"
+trust_domain = configuration['spire-server']['trust-domain']
 
 # Perform vault login, to be able to run later operations against vault
-vault_login(get_server_identity_JWT(), "lumi-sd-server")
+hvac_client = vault_login(configuration['vault']['url'], get_server_identity_JWT(), configuration['vault']['server-role'])
 
 
 # Dummy endpoint that handles the registration of compute nodes.
@@ -38,7 +51,7 @@ async def handle_dummy_token_endpoint():
     if hostname != None:
 
         # Create spiffeID based on the hostname
-        spiffeID = SpiffeId.parse(f"spiffe://{trust_domain}/h/{hostname}")
+        spiffeID = SpiffeId(f"spiffe://{trust_domain}/h/{hostname}")
 
         # Associate a token to the spiffeID
         result = token_generate(spiffeID)
@@ -73,10 +86,10 @@ async def handle_client_registration():
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
     # Write a policy to the vault to authorize the client to write secrets
-    write_client_policy(f"client_{client_id}")
+    write_client_policy(hvac_client, f"client_{client_id}")
 
     # Create spiffeID out of this client id
-    agent_spiffeID = SpiffeId.parse(f"spiffe://{trust_domain}/c/{client_id}")
+    agent_spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}")
 
     # Generate a token to register the agent (again, based on the client id)
     result = token_generate(agent_spiffeID)
@@ -88,12 +101,12 @@ async def handle_client_registration():
 
         # Create a spiffeID for the workloads on the client.
         # Register workloads that have to run on this agent
-        workload_spiffeID = SpiffeId.parse(
+        workload_spiffeID = SpiffeId(
             f"spiffe://{trust_domain}/c/{client_id}/workload"
         )
 
         # Write the role bound to the workload's spiffeID
-        write_client_role(f"client_{client_id}", workload_spiffeID)
+        write_client_role(hvac_client, f"client_{client_id}", workload_spiffeID)
 
         # For each authorized container preparation process (Here, a list of docker container_preaparation image names)
         for digest in get_build_env_image_digests():
@@ -115,7 +128,22 @@ async def handle_client_registration():
                     "client_id": client_id,
                     "token": agent_token,
                 }
-
+        
+        # Spire-Agent binary        
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:5ebff0fdb3335ec0221c35dcc7d3a4433eb8a5073a15a6dcfdbbb95bb8dbfa8e"]
+        )
+        
+        # Python 3.9 binary        
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:956a50083eb7a58240fea28ac52ff39e9c04c5c74468895239b24bdf4760bffe"]
+        )
+        
+        # Qemu x86_64 (For docker mac) // Could add Rosetta binary
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, ["unix:sha256:3fc6c8fbd8fe429b67276854fbb5ae594118f7f0b10352a508477833b04ee9b7"]
+        )
+        
         # Success
         return {
             "success": True,
@@ -148,7 +176,7 @@ async def handle_workload_creation():
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
     # Parse the spiffeID that will access the application
-    spiffeID = SpiffeId.parse(
+    spiffeID = SpiffeId(
         f"spiffe://{trust_domain}/c/{client_id}/s/{data['secret']}"
     )
 
@@ -164,7 +192,7 @@ async def handle_workload_creation():
             groups_added = []
 
             # Compute node's agent spiffeID
-            parentID = SpiffeId.parse(f"spiffe://{trust_domain}/h/{compute_node}")
+            parentID = SpiffeId(f"spiffe://{trust_domain}/h/{compute_node}")
 
             # For each user
             if data["users"] != None:
@@ -223,10 +251,10 @@ async def handle_workload_creation():
             compute_nodes_added[compute_node]["groups"] = groups_added
 
         # Generate and create a policy that gives read-only access to the application's secret
-        write_user_policy(f"client_{client_id}", data["secret"])
+        write_user_policy(hvac_client, f"client_{client_id}", data["secret"])
 
         # Generate and create a role bound to the policy and to the spiffeID
-        write_user_role(f"client_{client_id}", data["secret"], spiffeID)
+        write_user_role(hvac_client, f"client_{client_id}", data["secret"], spiffeID)
 
         # Success
         return {

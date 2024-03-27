@@ -8,8 +8,10 @@ spire_server_bin = "./bin/spire-server"
 pre_command = "microk8s.kubectl exec -n spire spire-server-0 --"
 
 
-jwt_workload_api = default_jwt_source.DefaultJwtSource(
-    spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock"
+jwt_workload_api =  default_jwt_source.DefaultJwtSource(
+    workload_api_client=None,
+    spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock",
+    timeout_in_seconds=None
 )
 
 
@@ -23,9 +25,15 @@ def token_generate(spiffeID: SpiffeId) -> subprocess.CompletedProcess:
         subprocess.CompletedProcess: result of the cli command to create the token
     """
 
-    command = f"{pre_command} {spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
-        " "
-    )
+    if pre_command != "":
+        command = f"{pre_command} {spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
+            " "
+        )
+    else:
+        command = f"{spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
+            " "
+        )
+        
     return subprocess.run(command, capture_output=True)
 
 
@@ -42,9 +50,14 @@ def entry_create(
     Returns:
         subprocess.CompletedProcess: result of the cli command to create the entry
     """
-    command = f"{pre_command} {spire_server_bin} entry create -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
-        " "
-    )
+    if pre_command != "":
+        command = f"{pre_command} {spire_server_bin} entry create -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
+            " "
+        )
+    else:
+        command = f"{spire_server_bin} entry create -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
+            " "
+        )
 
     # Append selectors to final command
     for selector in selectors:
@@ -62,9 +75,9 @@ def get_server_identity_JWT() -> JwtSvid:
     """
 
     # Perform an api fetch using pyspiffe
-    SVID = jwt_workload_api.get_jwt_svid(
+    SVID = jwt_workload_api.fetch_svid(
         audiences=["TESTING"],
-        subject=SpiffeId().parse("spiffe://lumi-sd-dev/lumi-sd-server"),
+        subject=SpiffeId("spiffe://lumi-sd-dev/lumi-sd-server"),
     )
     return SVID
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 ## This entrypoint wraps up the container preparation with the agent spawning and the key shipping.
 #
@@ -10,6 +10,7 @@ docker_path="/var/run/docker.sock"
 parse_args() {
     while [[ "$#" -gt 0 ]]; do
         case "$1" in
+            --config) config="$2"; shift 2 ;;
             -b|--base-oci-image) base_oci_image="$2"; shift 2 ;;
             -s|--sif-path) sif_path="$2"; shift 2 ;;
             -e|--encrypted) encrypted=true; shift ;;
@@ -26,7 +27,7 @@ parse_args() {
     done
 
     # Check for required arguments
-    if [ -z "$base_oci_image" ] || [ -z "$sif_path" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || ( [ -z "$users" ] && [ -z "$groups" ] ) || [ -z "$compute_nodes" ]; then
+    if [ -z "$config" ] || [ -z "$base_oci_image" ] || [ -z "$sif_path" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || ( [ -z "$users" ] && [ -z "$groups" ] ) || [ -z "$compute_nodes" ]; then
         echo echo "Please provides options for both of these programs : "
         python3 ./prepare_container.py --help
         python3 ./utils/ship_a_key.py --help
@@ -66,10 +67,13 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Entering ent
 if [ -n "$encrypted" ]; then
     echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on. Registering and running SPIRE Agent"
 
-    python3 ./utils/spawn_agent.py > /dev/null 2> /dev/null || exit 1 &
+    python3 ./utils/spawn_agent.py --config $config > /dev/null 2> /dev/null &
     spire_agent_pid=$!
 
 fi
+
+
+ps $spire_agent_pid > /dev/null || ( echo "spire agent died, aborting" ; end_entrypoint "$spire_agent_pid" 1)
 
 #
 ## [END] Perform node attestation
@@ -110,13 +114,13 @@ else
 
     if [ -z "$users" ]; then
         # If the user provided only groups
-        python3 ./utils/ship_a_key.py --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+        python3 ./utils/ship_a_key.py --config $config --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
     elif [ -z "$groups" ] ; then
         # If the user provided only users
-        python3 ./utils/ship_a_key.py --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+        python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
     else
         # If the user provided both
-        python3 ./utils/ship_a_key.py --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+        python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
     fi
 
     echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Key written to the vault"

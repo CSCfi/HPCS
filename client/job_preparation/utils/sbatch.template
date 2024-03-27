@@ -53,16 +53,38 @@ export vault="VAULT_ADDRESS"
 WORKING_DIRECTORY=WORKDIR
 mkdir -p ${WORKING_DIRECTORY}
 
-# Bring LUMI-SD logic
+# Clone HPCS repository if not already available
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Cloning HPCS repository if it doesn't already exist"
 
-## Clone repo in common directory if it doesn't already exists
-### For the moment : assume it's already cloned in ~/LUMI-secure-processing
+if ! [ -d ~/HPCS ]; then
+    git clone https://github.com/CSCfi/HPCS.git ~/HPCS
+fi
+
+echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Getting age and gocryptfs as static binaries"
+cd ~/HPCS           || exit 1
+PATH=$PATH:$HOME/HPCS/bin
+
+if ! which age ; then
+    mkdir -p bin
+    curl -O -L https://github.com/FiloSottile/age/releases/download/v1.1.1/age-v1.1.1-linux-amd64.tar.gz  || exit 1
+    tar xvf age-v1.1.1-linux-amd64.tar.gz
+    mv age/age ./bin/
+    rm -r age*
+fi
+
+if ! which gocryptfs ; then
+    mkdir -p bin
+    curl -O -L https://github.com/rfjakob/gocryptfs/releases/download/v2.4.0/gocryptfs_v2.4.0_linux-static_amd64.tar.gz  || exit 1
+    tar xvf gocryptfs_v2.4.0_linux-static_amd64.tar.gz 
+    mv gocryptfs ./bin/
+    rm -r gocryptfs*
+fi
+
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running agent registration"
 
 # Spawn spire-agent
-cd ~/LUMI-secure-processing           || exit 1
-python3 ./utils/spawn_agent.py -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
+python3 ./utils/spawn_agent.py --config ~/.config/hpcs-client.conf -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
 spire_agent_pid=$!
 
 # Wait until agent runs properly
@@ -85,18 +107,18 @@ echo "Logging in to the vault ..."
 
 # Log in to the vault using SVID, access role
 echo "{\"role\": \"APPLICATION_ACCESS_ROLE\", \"jwt\" : \"$svid\"}" > /tmp/login
-application_token=$(curl -s --request POST --data @/tmp/login http://${vault}/v1/auth/jwt/login | jq '.auth.client_token' -r)  || cleanup $spire_agent_pid 1
+application_token=$(curl -s --request POST --data @/tmp/login $vault/v1/auth/jwt/login | jq '.auth.client_token' -r)  || cleanup $spire_agent_pid 1
 
 echo "Getting container decryption key ..."
 
 # Use provided vault token (from login) to access secrets
-data_key=$(curl -s -H "X-Vault-Token: $application_token" http://${vault}/v1/kv/data/APPLICATION_SECRET_PATH | jq '.data.data.key' -r)    || cleanup $spire_agent_pid 1
+data_key=$(curl -s -H "X-Vault-Token: $application_token" $vault/v1/kv/data/APPLICATION_SECRET_PATH | jq '.data.data.key' -r)    || cleanup $spire_agent_pid 1
 echo "$data_key" > /tmp/container_key
 
 echo "Decrypting container image ..."
 
 # Decrypt the container image
-~/LUMI-secure-processing/client/container_preparation/input_logic/age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
+age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Creating encrypted volumes"
 
@@ -110,8 +132,8 @@ password_in=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c 25)
 password_out=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c 25)
 
 # Setup encrypted volumes
-/users/etellier/gocryptfs -q -init --extpass echo --extpass "$password_out" output
-/users/etellier/gocryptfs -q -init --extpass echo --extpass "$password_in" input
+gocryptfs -q -init --extpass echo --extpass "$password_out" output
+gocryptfs -q -init --extpass echo --extpass "$password_in" input
 
 # Mounting cipher version of the output encrypted filesystem to write final encrypted results
 # Mounting the encrypted input data tgz to the container to decrypt it in the input encrypted filesystem
@@ -119,8 +141,8 @@ BASIC_FLAGS="--bind ./output:/tmp/output --bind DATA_PATH:/sd-container/input/da
 
 # Encrypted binds inside of the container
 BIND_ENCRYPTED_VOLUME_FLAG="--fusemount host:"
-BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_INPUT="/users/etellier/gocryptfs -q --extpass echo --extpass ${password_in} ${WORKING_DIRECTORY}/input /sd-container/encrypted"
-BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_OUTPUT="/users/etellier/gocryptfs -q --extpass echo --extpass ${password_out} ${WORKING_DIRECTORY}/output /sd-container/output"
+BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_INPUT="$HOME/HPCS/bin/gocryptfs -q --extpass echo --extpass ${password_in} ${WORKING_DIRECTORY}/input /sd-container/encrypted"
+BIND_ENCRYPTED_VOLUME_FLAG_MOUNT_OUTPUT="$HOME/HPCS/bin/gocryptfs -q --extpass echo --extpass ${password_out} ${WORKING_DIRECTORY}/output /sd-container/output"
 BIND_INPUT="INPUT_SCRIPTS_DIR"
 BIND_OUTPUT="OUTPUT_SCRIPTS_DIR"
 

@@ -1,5 +1,5 @@
 from paramiko.client import SSHClient
-from paramiko import SSHException, AutoAddPolicy
+from paramiko import SSHException, AutoAddPolicy, RSAKey
 from scp import SCPClient
 
 # Hostname and port configuration
@@ -30,11 +30,13 @@ def ssh_connect(username: str) -> SSHClient:
 
     # Probably running in a container
     except SSHException:
+        pkey=RSAKey.from_private_key_file("/tmp/.ssh/id_rsa")
         client.connect(
             host,
             port,
             username=username,
-            key_filename="/tmp/.ssh/id_rsa",
+            pkey=pkey,
+            look_for_keys=False,
             auth_timeout=30,
             timeout=30,
         )
