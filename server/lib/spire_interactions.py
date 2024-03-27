@@ -8,10 +8,10 @@ spire_server_bin = "./bin/spire-server"
 pre_command = "microk8s.kubectl exec -n spire spire-server-0 --"
 
 
-jwt_workload_api =  default_jwt_source.DefaultJwtSource(
+jwt_workload_api = default_jwt_source.DefaultJwtSource(
     workload_api_client=None,
     spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock",
-    timeout_in_seconds=None
+    timeout_in_seconds=None,
 )
 
 
@@ -33,7 +33,7 @@ def token_generate(spiffeID: SpiffeId) -> subprocess.CompletedProcess:
         command = f"{spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
             " "
         )
-        
+
     return subprocess.run(command, capture_output=True)
 
 

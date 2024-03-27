@@ -1,29 +1,24 @@
 # Using Python original Docker image
-FROM --platform=linux/amd64 python:3.9-alpine
-
-# Install necessary packages
-RUN apk add \
-    curl \
-    build-base \
-    libffi-dev
-
-RUN curl https://sh.rustup.rs -sSf -o rustup.sh ; chmod +x rustup.sh ; ./rustup.sh -y
-ENV PATH="$PATH:/root/.cargo/bin"
-
-# Create code directory, output directory
-RUN mkdir /job_preparation
+ARG  BUILDPLATFORM=linux/amd64
+FROM --platform=$BUILDPLATFORM python:3.9-alpine
 
 # Copy useful data from the project
 COPY ./client/job_preparation /job_preparation
 
+# Set workdir
+WORKDIR /job_preparation
+
 # Copy utils for SPIFFEID creation ...
 COPY ./utils /job_preparation/utils
 
-# Install dependencies
-RUN cd /job_preparation && pip install -r ./requirements.txt
-
-# Set workdir
-WORKDIR /job_preparation
+# Install necessary packages and rust
+RUN apk add --no-cache \
+    curl=8.5.0-r0 \
+    build-base=0.5-r3 \
+    libffi-dev=3.4.4-r3 && \
+curl https://sh.rustup.rs -sSf -o rustup.sh ; chmod +x rustup.sh ; ./rustup.sh -y ; export PATH="$PATH":/root/.cargo/bin && \
+pip install --no-cache-dir -r ./requirements.txt && \
+rm -r /root/.cargo /root/.rustup
 
 # Set entrypoint
 ENTRYPOINT [ "python3", "./prepare_job.py" ]

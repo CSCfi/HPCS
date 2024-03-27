@@ -1,5 +1,6 @@
 import argparse
 
+
 # Parse arguments from the cli
 def parse_arguments():
     """Parse arguments from cli

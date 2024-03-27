@@ -1,9 +1,9 @@
 #!/bin/sh
 
 for input_logic_script in $(find /sd-container/tools/output_logic | grep ".sh" | grep -v "run.sh"); do
-    echo "[SD-Container][Output-Logic] : Running ${input_logic_script}"
-    $input_logic_script     || echo "${input_logic_script} failed, aborting."
-    echo "[SD-Container][Output-Logic] : End of ${input_logic_script}"
+	echo "[SD-Container][Output-Logic] : Running ${input_logic_script}"
+	$input_logic_script || echo "${input_logic_script} failed, aborting."
+	echo "[SD-Container][Output-Logic] : End of ${input_logic_script}"
 done
 
 PATH="$PATH:/sd-container/tools/input_logic/"
