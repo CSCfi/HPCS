@@ -42,7 +42,7 @@ sequenceDiagram
 ## Sequence diagram of the container's preparation (without shipping)
 
 ### Image is prepared and then encrypted (Encryption at rest)
-
+This step is currently (3/2024) used to encrypt the container. It does not require changes on LUMI to work.
 ```mermaid
 sequenceDiagram
     User -->>HPCS Client: spawns using `python3 prepare_container.py [OPTIONS]`
@@ -61,7 +61,7 @@ sequenceDiagram
 
 
 ### Image is prepared and SIF encrypted
-
+When HPC nodes support encrypted containers, this process can be used.
 ```mermaid
 sequenceDiagram
     User -->>HPCS Client: spawns using `python3 prepare_container.py [OPTIONS]`
