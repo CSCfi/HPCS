@@ -43,7 +43,7 @@ docker pull ghcr.io/cscfi/hpcs/job-prep:latest
 
 #### Configuring the client
 
-Informations about Spire-Server, HPCS-Server and Vault depends on the server installation and the setup choices made on it's side. If you don't know those informations, please contact your HPCS-Server service provider.
+Information about the Spire-Server, the HPCS-Server and the Vault depends on the respective server installation setup choices. For more information on the configuration, please contact your HPCS-Server service provider.
 
 The client configuration is made of 4 main sections, in INI format. In depth description of the configuration files is available [here](https://github.com/CSCfi/HPCS/docs/configuration).
 
@@ -65,9 +65,9 @@ url = https://vault-provider:port
 address = lumi.csc.fi
 username = etellier
 ```
-Please replace `spire-server` section configuration with the informations relative to your Spire Server.
-You will also need to replace `hpcs-server` with the address of your HPCS server, eventually the `port` with the port on which HPCS server is exposed.
-The `vault` is the same as the `hpcs-server` section, please complete it with your vault informations.
+Please replace the `spire-server` section configuration with the settings relative to your Spire Server.
+You will also need to replace `hpcs-server` with the address of your HPCS server, eventually the `port` with the port on which the HPCS server is exposed.
+The `vault` is the same as the `hpcs-server` section, please complete it with your vault settings.
 Finally, configure the supercomputer to use in the `supercomputer` section, specifying it's address under `address` and your `username` on the system. Your SSH Key needs to be setup.
 
 #### Prepare the runtime
@@ -215,7 +215,7 @@ WIP
 
 #### Docker-compose
 
-:warning: This method is not the officially supporter method for HPCS Server
+:warning: This method is not the officially supported method for HPCS Server and merely intended for testing purposes.
 
 Pull server's image using Docker pull :
 
@@ -228,9 +228,9 @@ The server configuration is made of 2 main sections, in INI format. In depth des
 You'll be able to configure your Spire Server interfacing specifying :
 - Address and port of the spire-server API.
 - Spire trust domain.
-- pre-command and spire-server-bin : f.e pre-command = "`kubectl exec -n spire spire-server-0 -- `" and spire-server-bin = "`spire-server`" will then be used to create cli interactions with the Spire Server socket (i.e : `kubectl exec -n spire spire-server-0 -- spire-server entry show`). Please keep this part as-it-is when running docker standalone and mount the spire-server directory at it's default path (`/tmp/spire-server`).
+- pre-command and spire-server-bin : e.g pre-command = "`kubectl exec -n spire spire-server-0 -- `" and spire-server-bin = "`spire-server`" will then be used to create cli interactions with the Spire Server socket (i.e : `kubectl exec -n spire spire-server-0 -- spire-server entry show`). Please keep this part as-it-is when running docker standalone and mount the spire-server directory at it's default path (`/tmp/spire-server`).
 
-And vault configuration will work the same as for the client (using a base `url` config). The main difference is that you need to specify the name of the spire-server role in the Vault. This role needs to be created manually and needs to be bound to a policy allowing it to create policies and roles for clients (data/container preparation) and workloads (accessing data/container).
+Vault configuration will work the same as for the client (using a base `url` config). The main difference is that you need to specify the name of the spire-server role in the Vault. This role needs to be created manually and needs to be bound to a policy allowing it to create policies and roles for clients (data/container preparation) and workloads (accessing data/container).
 
 ```ini
 [spire-server]
@@ -313,25 +313,25 @@ docker-compose run server
 
 ## Limitations
 
-Currently still under development this project has been developped using LUMI's environment. The philosophy of it aims to limit as possible the need of supercomputer's administrators. Even though it makes it easier to adapt to other environments, it also means that some supercomputer's limitations can prevent HPCS to achieve it's full potential.
+This project has been developed to work on LUMI and is currently (03/2024) still under development. The goal was to use LUMI as-is, without the need for changes by administrators. Even though this makes it easier to adapt to other environments, it also means introducing limitations that can prevent HPCS to achieve its full potential. These limitations are discussed below.
 
 ### Node attestation
 
-This project enable users to chose who can read their data or containers based on UNIX identities on the super-computer platform. Another important feature is the possibility for them to limit this access to a specific set of node on the supercomputer site. However, this feature requires the attestation of the nodes.
+This project enables users to chose who can read their data or containers based on UNIX identities on the super-computer platform. Another important feature is the possibility for them to limit this access to a specific set of nodes on the supercomputer site. However, this feature requires the attestation of the nodes.
 
-[Several methods of attestation](https://github.com/spiffe/spire/tree/main/doc) exists using Spire HPCS mainly benefits from these :
+[Several methods of attestation](https://github.com/spiffe/spire/tree/main/doc) exist using Spire. The following are most relevant for HPCS:
 - Token based attestation (user provides a token that is pre-registered to attest the node using it).
-- Slurm based attestation (nothing done, need first to make sure that slurm is a trustable source of informations to attest the node).
+- Slurm based attestation (not in use at the moment, needs first to make sure that slurm is a trustable source of information to attest the node).
 - TPM based attestation ([with DevID](https://github.com/spiffe/spire/blob/main/doc/plugin_agent_nodeattestor_tpm_devid.md) or [without](https://github.com/boxboat/spire-tpm-plugin)).
 - Other hardware based key management based attestation (ex : [sev-snp](https://github.com/ufcg-lsd/spire-amd-sev-snp-node-attestor), in the future).
 
-Using TPM, for example, it's very easy to run automatic node attestation, based on hardware managed keys that can't be easily spoofed. Unfortunately, LUMI's premise doesn't provide TPM at the moment and for this reason, node attestation is currently made using a dummy endpoint providing join tokens to anyone. However, this behaviour could easily be modified to strenghten the node attestation with very low code modification for other supercomputers.
+Using TPM, for example, it is very easy to run automatic node attestation, based on hardware managed keys that can't be easily spoofed. Unfortunately, LUMI does not provide TPM at the moment and for this reason, node attestation is currently made using a dummy endpoint providing join tokens to anyone. However, this behaviour could easily be modified to strengthen the node attestation with very low code modification for other supercomputers. For example, the node attestation could be performed by admins instead of the present user-initiated attestation.
 
 ### Encrypted container
 
-This project leverage Singularity / Apptainer 's [encrypted containers](https://docs.sylabs.io/guides/3.4/user-guide/encryption.html). This feature provides to the final user a way of protecting the runtime of the container, allowing it to protect data from every interactions of the container with the outside world. 
+The goal of this project was to leverage Singularity/Apptainer's [encrypted containers](https://docs.sylabs.io/guides/3.4/user-guide/encryption.html). This feature enables the end user to protect the runtime of the container, allowing it to confine unencrypted data within the encrypted container, adding an extra layer of security. 
 
-Unfortunately, for LUMI, this feature relies on different technologies, depending the permission level at which the container is encrypted, this behaviour is documented in the following table for usage on LUMI :
+Unfortunately for LUMI, this feature relies on different technologies, depending the permission level at which the container is encrypted, this behaviour is documented in the following table for usage on LUMI :
 
 | Build \ Run | root ? | singularity-ce version 3.11.4-1 (LUMI) | apptainer version 1.2.5 (Binary able to be shipped to LUMI) |
 | --- | --- | --- | --- |
@@ -340,21 +340,21 @@ Unfortunately, for LUMI, this feature relies on different technologies, dependin
 | apptainer version 1.2.5 | yes | Unable to decrypt filesystem (no dm_crypt) | Failure (says user namespaces are needed) |
 | apptainer version 1.2.5 | no | Filesystem not recognized | Failure (says user namespaces are needed) |
 
-Two main reasons to the issues with the encrypted containers :
-- Cannot run as root on a node (no workaround, completely normal)
+Two main reasons for the issues with the encrypted containers :
+- Cannot run as root on a node (no workaround, as this is a feature of HPC environments).
 - User namespaces are disabled on LUMI (for secure reason, [this stackexchange](https://security.stackexchange.com/questions/267628/user-namespaces-do-they-increase-security-or-introduce-new-attack-surface) has some explanations).
   
-At the end of the day, to secure container's runtime, we would need to open a relative potential breach (by enabling user namespaces on the platform), which isn't so logical and seems not to be possible on some platforms (LUMI, f.e).
+To run encrypted containers as described above, we would need to enable user namespaces on the platform. This would require a thorough risk/benefit assessment, since it introduces new attack surfaces and therefore will not be introduced lightly, at least not on on LUMI in the near future.
 
-Our mitigation to the lack of confidentiality that leaves the unavailability of encrypted containers works in two steps :
+We mitigate the unavailability of encrypted containers in two steps :
 - Encryption of the container at rest (encryption of the image file while stored on the supercomputer, decryption right before runtime)
 - Usage of encrypted FUSE Filesystems in the container. This is achieved using `gocryptfs` (actually the same way as Singularity does it for encrypted containers) but only for some mountpoints. This for example allows us to certify that the input dataset won't ever be written as plaintext on the node as well as the output data.
 
-However, again, this limitation has known solutions (cf. user namespaces) that will be leveraged or not on the platforms. The code was originally written to work with encrypted containers and this code is currently commented out but still available in case of usage on platform supporting user namespaces. Another lead that hasn't been explored as of today is [the newest version of Apptainer](https://github.com/apptainer/apptainer/releases/tag/v1.3.0), introducing new behaviour based on setuid.
+However, this limitation has known solutions (cf. user namespaces) that will be leveraged or not on the platforms. The code was originally written to work with encrypted containers and this code is currently commented out but still available in case of usage on platform supporting user namespaces. Another lead that hasn't been explored as of today is [the newest version of Apptainer](https://github.com/apptainer/apptainer/releases/tag/v1.3.0), introducing new behaviour based on setuid.
 
 ### Client attestation
 
-When a client shows up to encrypt it's data or container and to give access to it to someone, it's automatically attested, based on it's public IP. A workload identity is then automatically created, based on the `sha256sum` of the binary calling the workload API or the image_id of the container where the workload is running (See #5). This behaviour represents a problem because this attestation method isn't appliable to every clients :
+When a client wants to encrypt its data or container and to give access to it to someone, it's automatically attested, based on it's public IP. A workload identity is then automatically created, based on the `sha256sum` of the binary calling the workload API or the image_id of the container where the workload is running (See #5). This behaviour represents a problem because this attestation method isn't applicable to every client:
 - Client runs containers using cgroupsv1
   - Fine, the docker image_id can be used. However, this image_id can be spoofed
 - Client runs containers using cgroupsv2
