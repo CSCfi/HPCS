@@ -16,12 +16,12 @@ if __name__ == "__main__":
 
     # Parse configuration
     configuration = parse_configuration(options.config)
-    
+
     # Parse configuration as options
-    options.username = configuration['supercomputer']['username']
-    options.trust_domain = configuration['spire-server']['trust-domain']
-    options.vault_address = configuration['vault']['url']
-    
+    options.username = configuration["supercomputer"]["username"]
+    options.trust_domain = configuration["spire-server"]["trust-domain"]
+    options.vault_address = configuration["vault"]["url"]
+
     # Check arguments
     options = check_arguments(options)
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # Copy SBATCH to supercomputer
     ssh_copy_file(ssh_client, sbatch_path, f"~/")
-    
+
     # Copy config file to supercomputer
     ssh_copy_file(ssh_client, options.config, f"~/.config/hpcs-client.conf")
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         print(
             f"Waiting for the job to run. You can now exit this script if needed, outputs will be available in {options.workdir}/output when finished"
         )
-        
+
         # Specific output format squeue command to parse informations about submitted job
         command = f"squeue -o '%A;%u;%T' | grep {options.username} | grep {jobid}"
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         job_status = ""
         stdout = stdout.read().decode().replace("\n", "")
         stdin.close()
-        
+
         # While job runs (while it has an entry in squeue)
         while stdout != "":
             # If status has changed

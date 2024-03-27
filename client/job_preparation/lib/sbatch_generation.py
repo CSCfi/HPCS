@@ -11,7 +11,7 @@ def sbatch_from_template(options: argparse.Namespace, template_path: str) -> str
     Returns:
         str: path to the generated sbtach file
     """
-    
+
     # Replace placeholders in template str
     sbatch = boostrap_from_template(options, template_path)
 
@@ -35,7 +35,7 @@ def boostrap_from_template(options: argparse.Namespace, template_path: str) -> s
     """
     with open(template_path, "r") as sbatchfile:
         sbatch = sbatchfile.read()
-        
+
         # Add general info
         sbatch = sbatch.replace("JOB_NAME", options.job_name.replace("/", "_"))
         sbatch = sbatch.replace("NODES", options.nodes)
@@ -62,7 +62,6 @@ def boostrap_from_template(options: argparse.Namespace, template_path: str) -> s
         sbatch = sbatch.replace(
             "APPLICATION_SECRET_PATH", options.application_secret_path
         )
-
 
         # Singularity info
         if options.singularity_supplementary_flags:

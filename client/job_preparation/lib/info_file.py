@@ -42,7 +42,7 @@ def get_info_from_infofile(ssh_client: SSHClient, path: str):
 
 
 def parse_info_file(ssh_client: SSHClient, path: str):
-    """Read an info file and parse it as a Python object 
+    """Read an info file and parse it as a Python object
 
     Args:
         ssh_client (SSHClient): ssh client to use to read info file

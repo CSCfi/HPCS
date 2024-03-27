@@ -34,6 +34,7 @@ def parse_arguments():
 
     return parser.parse_args()
 
+
 def get_token(url, compute_node_token: bool):
     """Get joinToken to perform node registration from server
 
@@ -68,25 +69,23 @@ def get_token(url, compute_node_token: bool):
 if __name__ == "__main__":
     # Get arguments
     options = parse_arguments()
-    
+
     # Parse configuration file
     configuration = parse_configuration(options.config)
 
     # Get token from API
-    token = get_token(
-        configuration['hpcs-server']['url'], options.compute_node
-    )
+    token = get_token(configuration["hpcs-server"]["url"], options.compute_node)
 
     # Overwrite configuration template
     agent_configuration_template = open("./utils/agent-on-the-fly.conf").read()
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_TRUST_DOMAIN", configuration['spire-server']['trust-domain']
+        "SPIRE_TRUST_DOMAIN", configuration["spire-server"]["trust-domain"]
     )
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_SERVER_ADDRESS", configuration['spire-server']['address']
+        "SPIRE_SERVER_ADDRESS", configuration["spire-server"]["address"]
     )
     agent_configuration_template = agent_configuration_template.replace(
-        "SPIRE_SERVER_PORT", configuration['spire-server']['port']
+        "SPIRE_SERVER_PORT", configuration["spire-server"]["port"]
     )
     agent_configuration_template = agent_configuration_template.replace(
         "SOCKETPATH", options.socketpath

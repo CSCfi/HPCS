@@ -75,7 +75,7 @@ fi
 if ! which gocryptfs ; then
     mkdir -p bin
     curl -O -L https://github.com/rfjakob/gocryptfs/releases/download/v2.4.0/gocryptfs_v2.4.0_linux-static_amd64.tar.gz  || exit 1
-    tar xvf gocryptfs_v2.4.0_linux-static_amd64.tar.gz 
+    tar xvf gocryptfs_v2.4.0_linux-static_amd64.tar.gz
     mv gocryptfs ./bin/
     rm -r gocryptfs*
 fi
