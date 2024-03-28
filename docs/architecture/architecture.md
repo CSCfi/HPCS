@@ -135,8 +135,8 @@ CN4SBATCH <--"HTTPS"--> Vault
 HPCSCDPB <--"SSH (As user - Data & Info files)"--> LN
 HPCSCCPB <--"SSH (As user - Container image & Info files)"--> LN
 
-HPCSCJPB --"SSH (As user - SBATCH file & CLI Call to SBATCH)"--> LN 
+HPCSCJPB --"SSH (As user - SBATCH file & CLI Call to SBATCH)"--> LN
 LN --"SSH (As user - Info files)"--> HPCSCJPB
 ```
 
-This diagram doesn't show the HTTPS requests from client/compute node to HPCS Server used to register the agents since this behaviour is a practical workaround. See section "Limitations" in [HPCS/README.md](https://github.com/CSCfi/HPCS/blob/main/README.md#limitations) for more information.
+This diagram doesn't show the HTTPS requests from client/compute node to HPCS Server used to register the agents since this behaviour is a practical workaround.
