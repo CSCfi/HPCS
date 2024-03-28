@@ -6,6 +6,7 @@ This step consists in using an input directory, encrypt it and ship it to the su
 
 ```mermaid
 sequenceDiagram
+    actor User
     User -->> Data Preparation container: spawns using docker-compose
     Data Preparation container -->> Spire Agent: spawns using `spawn_agent.py`
     Spire Agent ->> Spire Server: Runs node attestation
@@ -34,6 +35,6 @@ sequenceDiagram
     Supercomputer ->> Data Preparation container: 
     Data Preparation container -->> Spire Agent: Kills
     Spire Agent -->> Data Preparation container: 
-    Spire Agent -->> Data Preparation container: Dies 
+    Spire Agent -->> Data Preparation container: Dies
     Data Preparation container -->> User: Finishes
 ```
