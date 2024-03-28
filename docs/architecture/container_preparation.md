@@ -6,6 +6,7 @@ This step consist in using an original OCI image to prepare it, encrypt it and s
 
 ```mermaid
 sequenceDiagram
+    actor User
     User -->> Container Preparation container: spawns using docker-compose
     Container Preparation container -->> Spire Agent: spawns using `spawn_agent.py`
     Spire Agent ->> Spire Server: Runs node attestation
@@ -29,22 +30,24 @@ sequenceDiagram
     HPCS Server ->> Container Preparation container: SpiffeID & role to access the container, path to the secret
     Container Preparation container ->> Container Preparation container: Parse info file based on previous steps
     Container Preparation container ->> Supercomputer: Ship encrypted container
-    Supercomputer ->> Container Preparation container: 
+    Supercomputer ->> Container Preparation container: ' 
     Container Preparation container ->> Supercomputer: Ship info file
     Supercomputer ->> Container Preparation container: 
     Container Preparation container -->> Spire Agent: Kills
     Spire Agent -->> Container Preparation container: 
-    Spire Agent -->> Container Preparation container: Dies 
+    Spire Agent -->> Container Preparation container: Dies
     Container Preparation container -->> User: Finishes
 ```
-
 
 ## Sequence diagram of the container's preparation (without shipping)
 
 ### Image is prepared and then encrypted (Encryption at rest)
+
 This step is currently (3/2024) used to encrypt the container. It does not require changes on LUMI to work.
+
 ```mermaid
 sequenceDiagram
+    actor User
     User -->>HPCS Client: spawns using `python3 prepare_container.py [OPTIONS]`
     HPCS Client -->> Docker Client: spawns
     HPCS Client ->> HPCS Client: Create prepared Dockerfile
@@ -59,11 +62,13 @@ sequenceDiagram
     HPCS Client ->> HPCS Client: Encrypt image file
 ```
 
-
 ### Image is prepared and SIF encrypted
+
 When HPC nodes support encrypted containers, this process can be used.
+
 ```mermaid
 sequenceDiagram
+    actor User
     User -->>HPCS Client: spawns using `python3 prepare_container.py [OPTIONS]`
     HPCS Client -->> Docker Client: spawns
     HPCS Client ->> HPCS Client: Create prepared Dockerfile
