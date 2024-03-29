@@ -5,6 +5,9 @@ def parse_configuration(path: str):
     config = ConfigParser()
     config.read(path)
 
+    if not "spire-agent" in config:
+        raise NoSectionError("spire-agent section missing, aborting")
+
     if not "spire-server" in config:
         raise NoSectionError("spire-server section missing, aborting")
 
