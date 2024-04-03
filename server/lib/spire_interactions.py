@@ -9,6 +9,7 @@ pre_command = "microk8s.kubectl exec -n spire spire-server-0 --"
 
 
 jwt_workload_api = None
+hpcs_server_spiffeid = "spiffe://hpcs/hpcs-server/workload"
 
 
 def token_generate(spiffeID: SpiffeId) -> subprocess.CompletedProcess:
@@ -73,7 +74,7 @@ def get_server_identity_JWT() -> JwtSvid:
     # Perform an api fetch using pyspiffe
     SVID = jwt_workload_api.fetch_svid(
         audiences=["TESTING"],
-        subject=SpiffeId("spiffe://lumi-sd-dev/lumi-sd-server"),
+        subject=SpiffeId(f"{hpcs_server_spiffeid}"),
     )
     return SVID
 
