@@ -47,6 +47,15 @@ else:
         spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock",
         timeout_in_seconds=None,
     )
+
+if configuration["spire-agent"].get("hpcs-server-spiffeid"):
+    spire_interactions.hpcs_server_spiffeid = configuration["spire-agent"].get(
+        "hpcs-server-spiffeid"
+    )
+
+if configuration["spire-server"].get("pre-command"):
+    spire_interactions.pre_command = configuration["spire-server"]["pre-command"]
+    if configuration["spire-server"]["pre-command"] == '""':
         spire_interactions.pre_command = ""
 
 # Defining the trust domain (SPIRE Trust Domain)
