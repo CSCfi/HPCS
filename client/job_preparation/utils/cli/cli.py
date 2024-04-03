@@ -8,7 +8,7 @@ def parse_arguments() -> argparse.Namespace:
     Returns:
         ArgumentParser: the ArgumentParser produced
     """
-    parser = argparse.ArgumentParser(description="CLI Optinons")
+    parser = argparse.ArgumentParser(description="CLI Options")
 
     parser.add_argument(
         "--config",
@@ -21,14 +21,14 @@ def parse_arguments() -> argparse.Namespace:
         "--job-name",
         "-J",
         type=str,
-        help="name of job",
+        help="name of the job",
     )
     parser.add_argument(
         "--nodes",
         "-N",
         type=str,
         required=True,
-        help="number of nodes on which to run",
+        help="count of nodes on which to run",
     )
     parser.add_argument(
         "--partition",
@@ -49,7 +49,7 @@ def parse_arguments() -> argparse.Namespace:
         "-A",
         type=str,
         required=True,
-        help="charge job to specified account",
+        help="account to bill the job to",
     )
     parser.add_argument(
         "--nodelist",
