@@ -9,7 +9,7 @@ def parse_arguments():
     Returns:
         ArgumentParser: the ArgumentParser produced
     """
-    parser = argparse.ArgumentParser(description="CLI Optinons")
+    parser = argparse.ArgumentParser(description="CLI Options")
 
     parser.add_argument(
         "--config",
