@@ -53,6 +53,11 @@ if configuration["spire-agent"].get("hpcs-server-spiffeid"):
         "hpcs-server-spiffeid"
     )
 
+if configuration["spire-server"].get("socket-path"):
+    spire_interactions.spire_server_socketpath = configuration["spire-server"].get(
+        "socket-path"
+    )
+
 if configuration["spire-server"].get("pre-command"):
     spire_interactions.pre_command = configuration["spire-server"]["pre-command"]
     if configuration["spire-server"]["pre-command"] == '""':

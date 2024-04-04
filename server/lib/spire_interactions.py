@@ -10,6 +10,7 @@ pre_command = "microk8s.kubectl exec -n spire spire-server-0 --"
 
 jwt_workload_api = None
 hpcs_server_spiffeid = "spiffe://hpcs/hpcs-server/workload"
+spire_server_socketpath = "/tmp/spire-server/private/api.sock:"
 
 
 def token_generate(spiffeID: SpiffeId) -> subprocess.CompletedProcess:
@@ -23,11 +24,11 @@ def token_generate(spiffeID: SpiffeId) -> subprocess.CompletedProcess:
     """
 
     if pre_command != "":
-        command = f"{pre_command} {spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
+        command = f"{pre_command} {spire_server_bin} token generate -socketPath {spire_server_socketpath} -spiffeID {str(spiffeID)}".split(
             " "
         )
     else:
-        command = f"{spire_server_bin} token generate -spiffeID {str(spiffeID)}".split(
+        command = f"{spire_server_bin} token generate -socketPath {spire_server_socketpath} -spiffeID {str(spiffeID)}".split(
             " "
         )
 
@@ -48,11 +49,11 @@ def entry_create(
         subprocess.CompletedProcess: result of the cli command to create the entry
     """
     if pre_command != "":
-        command = f"{pre_command} {spire_server_bin} entry create -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
+        command = f"{pre_command} {spire_server_bin} entry create -socketPath {spire_server_socketpath} -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
             " "
         )
     else:
-        command = f"{spire_server_bin} entry create -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
+        command = f"{spire_server_bin} entry create -socketPath {spire_server_socketpath} -parentID {str(parentID)} -spiffeID {str(spiffeID)}".split(
             " "
         )
 
