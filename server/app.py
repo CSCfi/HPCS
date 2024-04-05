@@ -6,7 +6,7 @@ from lib.spire_interactions import (
     get_server_identity_JWT,
     validate_client_JWT_SVID,
 )
-from lib  import spire_interactions
+from lib import spire_interactions
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
 from pyspiffe.workloadapi import default_jwt_source
@@ -31,16 +31,13 @@ if configuration["spire-server"].get("spire-server-bin"):
         "spire-server-bin"
     ]
 
-if configuration["spire-server"].get("pre-command"):
-    spire_interactions.pre_command = configuration["spire-server"]["pre-command"]
-    if configuration["spire-server"]["pre-command"] == '""':
-
 if configuration["spire-agent"].get("spire-agent-socket"):
     spire_interactions.jwt_workload_api = default_jwt_source.DefaultJwtSource(
         workload_api_client=None,
         spiffe_socket_path=f"unix://{configuration['spire-agent'].get('spire-agent-socket')}",
         timeout_in_seconds=None,
     )
+
 else:
     spire_interactions.jwt_workload_api = default_jwt_source.DefaultJwtSource(
         workload_api_client=None,
