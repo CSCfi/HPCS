@@ -21,20 +21,20 @@ spec:
       shareProcessNamespace: true
       containers:
         - name: hpcs-server
-          image: ghcr.io/cscfi/hpcs/server:k8s_plan
+          image: ghcr.io/cscfi/hpcs/server:0.1.1
           ports:
             - containerPort: 10080
               name: hpcs-server
           volumeMounts:
-          - name: hpcs-server-configs
-            mountPath: /tmp/
-            readOnly: false
-          - name: hpcs-spire-sockets
-            mountPath: /var/run/sockets
-            readOnly: false
-          - name: hpcs-spire-agent-token
-            mountPath: /var/run/secrets/tokens
-            readOnly: true
+            - name: hpcs-server-configs
+              mountPath: /tmp/
+              readOnly: false
+            - name: hpcs-spire-sockets
+              mountPath: /var/run/sockets
+              readOnly: false
+            - name: hpcs-spire-agent-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
       volumes:
         - name: hpcs-server-configs
           configMap:
@@ -46,10 +46,10 @@ spec:
         - name: hpcs-spire-agent-token
           projected:
             sources:
-            - serviceAccountToken:
-                path: spire-agent
-                expirationSeconds: 7200
-                audience: spire-server
+              - serviceAccountToken:
+                  path: spire-agent
+                  expirationSeconds: 7200
+                  audience: spire-server
   volumeClaimTemplates:
     - metadata:
         name: spire-agent-data
