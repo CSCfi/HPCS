@@ -211,7 +211,263 @@ For docker-compose, we consider the Vault and the Spire Server as setup and the 
 
 #### K8s
 
-WIP
+HPCS' serverside consists in an web API. The difficulty in the installation of it comes with the underlying services that needs to be available for it to run properly. Here is a scheme of the architecture of a fully-installed HPCS server side.
+
+```mermaid
+flowchart LR
+
+subgraph SSP[Spire Server pod]
+  SSC[Spire Server container]
+  SOC[Spire OIDC container]
+  NC[Nginx proxy]
+end
+
+SSS[Spire server service]
+VS[Vault service]
+
+VP[Vault pod]
+
+HP[HPCS server pod]
+
+SSC <-- TCP:8081--> SSS
+NC <-- HTTPS:443--> SSS
+SSC <--UNIX Socket--> SOC
+SOC <--UNIX Socket--> NC
+SSS <--HTTPS:443--> VP
+HP <--TCP:8081--> SSS
+HP <--UNIX Socket--> SSC
+VS <--HTTP:8200--> VP
+HP <--HTTP:8200--> VS
+
+Outside <--HTTP:anyport--> VS
+Outside <--TCP:anyport--> SSS
+```
+(Ports are specified for the serverside, clients ports used for communication doesn't matter)
+
+This architecture comes in 3 different main parts :
+- HPCS Server (1 Container, containing Spire-Agent and HPCS Server)
+- Spire Server (3 Containers, spire-server, spire-oidc, and hpcs-nginx)
+- Vault (Helm chart, not managed by HPCS)
+
+In order to proceed to the deployment of this architecture, k8s is the supported method, all the code associated is available under `/k8s`.
+
+##### Pre-requisite
+
+Before proceeding to HPCS' deployment, an original setup is required including :
+- A ready-to-run k8s cluster
+- `kubectl` and `helm` available and able to run kubernetes configurations (`.yaml`)
+- `rbac`, `storage` and `dns` and `helm` kubernetes capabilities, f.e : `microk8s enable rbac storage dns helm` with microk8s.
+  
+Please note down the name of your k8s cluster in order to run later deployments.
+
+##### Configuration
+
+Several configurations are to be reviewed before proceeding.
+- Nginx SSL Certificate path : Please review in `/k8s/spire-server-nginx-configmap.yaml` (section `ssl_certificate`) and `/k8s/spire-server-statefulset.yaml` (section `volumeMounts` of container `hpcs-nginx` and section `volumes` of the pod configuration). If you plan to run the deployment using ansible, please review `/k8s/deploy-all.yaml`, section `Copy oidc cert to vault's pod` and `Create spire-oidc {key, csr, cert}` for the host path to the certificate. Create the directory configured before running deployment.
+  
+- Cluster name : Please review in `/k8s/hpcs-server-configmap.yaml`, section "`agent.conf`", then "`k8s_psat`" and `/k8s/spire-server-configmap.yaml`, section "`server.conf`", then "`k8s_psat`", replace "`docker-desktop`" with your k8s cluster name.
+  
+- For further information about spire agent/ server configurations under `/k8s/hpcs-server-configmap.yaml` and `/k8s/spire-server-configmap.yaml`, please refer to spire-server [configuration reference](https://spiffe.io/docs/latest/deploying/spire_server) and spire-agent [configuration reference](https://spiffe.io/docs/latest/deploying/spire_agent/). 
+
+
+##### Bash
+
+This part of the documentation walks you through the different steps necessary in order to run a manual deployment of HPCS' serverside (including Vault, Spire-Server and HPCS Server).
+
+__Starting with the "`spire-server`" pods :__
+
+Generate your nginx certificate :
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /path/to/your/privatekey.key -out /path/to/your/certificate.crt -addext "subjectAltName = DNS:spire-oidc"
+```
+
+Create HPCS namespace :
+```bash
+cd k8s
+kubectl apply -f hpcs-namespace.yaml 
+```
+
+Create Spire service account and cluster role :
+```bash
+kubectl apply -f spire-server-account.yaml -f spire-server-cluster-role.yaml
+```
+
+Create configmaps for spire-server, spire-oidc and nginx proxy :
+```bash
+kubectl apply -f spire-oidc-configmap.yaml -f spire-server-configmap.yaml -f spire-server-nginx-configmap.yaml 
+```
+
+Create spire-server statefulset, managing spire-server-x pods :
+```bash
+kubectl apply -f spire-server-statefulset.yaml
+```
+
+Expose spire-oidc proxy and spire-server's api over the cluster :
+```bash
+kubectl apply -f spire-server-service.yaml -f spire-oidc-service.yaml
+```
+
+At this point, you should be able to see at least one `spire-server-x` pod, f.e :
+
+```bash
+kubectl get -n hpcs pod/spire-server-0
+NAME             READY   STATUS    RESTARTS      AGE
+spire-server-0   3/3     Running   0             30s
+```
+
+And the port on which the spire-server API is exposed (here 31140) :
+```bash
+kubectl get -n hpcs service/spire-server  
+NAME           TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+spire-server   LoadBalancer   10.99.214.248   localhost     8081:31140/TCP   30s
+```
+
+__Then install Hashicorp Vault via it's official helm chart (here with microk8s):__
+
+Add hashicorp repo and run installation :
+```bash
+microk8s helm3 repo add hashicorp https://helm.releases.hashicorp.com
+helm install vault hashicorp/vault --version 0.27.0 --namespace=hpcs
+```
+
+Initialize the Vault :
+```bash
+kubectl exec -it vault-0 -n hpcs -- vault operator init -n 1 -t 1
+```
+Note unseal token and root token.
+
+Unseal vault :
+```bash
+kubectl exec -it vault-0 -n hpcs -- vault operator unseal [seal token]
+```
+
+Connect to the vault to enable jwt auth and kvv2 secrets, register oidc as a source :
+```bash
+kubectl exec -it vault-0 -n hpcs -- sh
+export VAULT_TOKEN="[root token]"
+
+# Enable kvv2
+vault secrets enable -version=2 kv
+
+# Enable jwt auth
+vault auth enable jwt
+
+# Connect OIDC authority (spire-oidc)
+vault write auth/jwt/config oidc_discovery_url=https://spire-oidc oidc_discovery_ca_pem="
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+"
+```
+
+Expose Vault's API to the node :
+```bash
+kubectl expose service vault --name="vault-external" --type="NodePort" --target-port 8200 -n hpcs
+```
+
+At this point, Vault is running and it's API is exposed, to check on which port, run :
+```bash           
+NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+vault-external   NodePort   10.111.198.147   localhost        8200:31819/TCP,8201:31587/TCP   2s
+```
+
+__Next step is to create a spire identity and it's vault role in order to be able to identify HPCS-Server against Vault__
+
+Get your kubernetes node uid (repeat this and the following spire identity creation for every nodes):
+```bash
+kubectl get nodes -o json | grep uid
+```
+
+Check wether you run containers using cgroupsv2 :
+```bash
+grep cgroup2 /proc/filesystems
+```
+
+Create the spire identity (If not using cgroupsv2):
+```bash
+kubectl exec -n hpcs spire-server-0 -c spire-server -- ./bin/spire-server entry create -spiffeID spiffe://hpcs/hpcs-server/workload -parentID spiffe://hpcs/spire/agent/k8s_psat/[Cluster Name]/[UID] -selector k8s:pod-name:hpcs-server
+```
+
+Create the spire identity (If using cgroupsv2):
+```bash
+kubectl exec -n hpcs spire-server-0 -c spire-server -- ./bin/spire-server entry create -spiffeID spiffe://hpcs/hpcs-server/workload -parentID spiffe://hpcs/spire/agent/k8s_psat/[Cluster Name]/[UID] -selector unix:uid:0
+```
+
+Connect to vault and create hpcs-server policy :
+```bash
+> kubectl exec -it vault-0 -n hpcs -- sh
+/ $ vi /tmp/policy
+path "auth/jwt/role/*" {
+  capabilities = ["sudo","read","create","delete","update"]
+}
+path "sys/policies/acl/*" {
+  capabilities = ["sudo","read","create","delete","update"]
+}
+/ $ vault policy write hpcs-server /tmp/policy
+/ $ vault write auth/jwt/role/hpcs-server role_type=jwt user_claim=sub bound_audiences=TESTING bound_subject=spiffe://hpcs/hpcs-server/workload token_ttl=24h tok
+en_policies=hpcs-server
+```
+
+__You can now deploy HPCS server__
+
+Create hpcs-server and hpcs-spire service accounts :
+```bash
+kubectl apply -f hpcs-server-account.yaml -f hpcs-spire-account.yaml 
+```
+
+Create hpcs server configmap :
+```bash
+kubectl apply -f hpcs-server-configmap.yaml
+```
+
+Create hpcs-server statefulset (and underlying pods) :
+```bash
+kubectl apply -f hpcs-server-statefulset.yaml
+```
+
+Expose hpcs-server api over the cluster :
+```bash
+kubectl apply -f hpcs-server-service.yaml
+```
+
+Expose hpcs-server service over the node :
+```bash
+kubectl expose service hpcs-server --name="hpcs-server-external" --type="NodePort" --target-port 10080 -n hpcs
+```
+
+Check exposed port :
+```bash           
+NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
+hpcs-server-external   NodePort   10.111.198.151   localhost        10080:31827/TCP   2s
+```
+
+That's it, you can now use HPCS server as you please.
+
+##### Ansible
+
+:warning: This method is currently still under development. You could run into non-documented issues.
+
+The previously explained steps can be automatically run using an ansible playbook available under `/k8s/deploy-all.yaml`
+
+All the pre-requisites listed before are necessary to run this playbook. If you are running kubernetes using `microk8s`, you will need to create aliases or fake commands for `helm`, for example using a script :
+```bash
+#!/bin/bash
+
+microk8s helm3 $@
+```
+Written as `/usr/bin/helm`.
+
+You will also need ansible k8s and openssl plugins :
+```bash
+ansible-galaxy collection install kubernetes.core
+ansible-galaxy collection install community.crypto
+```
+
+You can now run the ansible playbook :
+```bash
+cd k8s
+ansible-playbook deploy-all.yaml
+```
 
 #### Docker-compose
 
