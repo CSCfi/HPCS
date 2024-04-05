@@ -10,3 +10,7 @@ You can also see sequence diagrams for the [container preparation](https://githu
 ## CLI
 
 Documentation of the CLI of the server and the client are available under `cli/`. Those documentations are exports of the `python3 code --help` with further explanation if needed.
+
+## Configuration
+
+Configuration is available under `configuration/` directory. Client and server `ini` files configuration references are available.
