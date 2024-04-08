@@ -1,0 +1,246 @@
+- hosts: localhost
+  vars:
+    hpcs_server_policy: |
+      path "auth/jwt/role/*" {
+        capabilities = ["sudo","read","create","delete","update"]
+      }
+      path "sys/policies/acl/*" {
+        capabilities = ["sudo","read","create","delete","update"]
+      }
+
+  tasks:
+    - name: create hpcs namespace
+      k8s:
+        state: present
+        src: hpcs-namespace.yaml
+
+    - name: create spire-server account
+      k8s:
+        state: present
+        src: spire-server-account.yaml
+
+    - name: create spire-server clusterrole
+      k8s:
+        state: present
+        src: spire-server-cluster-role.yaml
+
+    - name: create spire-server configmap
+      k8s:
+        state: present
+        src: spire-server-configmap.yaml
+
+    - name: create spire-oidc configmap
+      k8s:
+        state: present
+        src: spire-oidc-configmap.yaml
+
+    - name: create spire nginx proxy configmap
+      k8s:
+        state: present
+        src: spire-server-nginx-configmap.yaml
+
+    - name: Create spire-oidc private key
+      openssl_privatekey:
+          path: /etc/certs/hpcs-spire-oidc/selfsigned.key
+          size: 4096
+
+    - name: Create spire-oidc csr
+      openssl_csr:
+          path: /etc/certs/hpcs-spire-oidc/selfsigned.csr
+          privatekey_path: /etc/certs/hpcs-spire-oidc/selfsigned.key
+
+    - name: Create spire-oidc certificate
+      openssl_certificate:
+          provider: selfsigned
+          path: /etc/certs/hpcs-spire-oidc/selfsigned.crt
+          privatekey_path: /etc/certs/hpcs-spire-oidc/selfsigned.key
+          csr_path: /etc/certs/hpcs-spire-oidc/selfsigned.csr
+
+    - name: create spire-server pod (spire-server, spire-oidc, hpcs-nginx)
+      k8s:
+        state: present
+        src: spire-server-statefulset.yaml
+
+    - name: create spire-server service (expose spire server port)
+      k8s:
+        state: present
+        src: spire-server-service.yaml
+
+    - name: create spire-server service (expose spire oidc port)
+      k8s:
+        state: present
+        src: spire-oidc-service.yaml
+
+    - name: Add hashicorp to helm repositories
+      kubernetes.core.helm_repository:
+        name: stable
+        repo_url: "https://helm.releases.hashicorp.com"
+
+    - name: Deploy hashicorp vault
+      kubernetes.core.helm:
+        release_name: vault
+        chart_ref: hashicorp/vault
+        release_namespace: hpcs
+        chart_version: 0.27.0
+
+    - name: Wait for vault to be created
+      shell: "kubectl get po -n hpcs vault-0 --output=jsonpath='{.status}'"
+      register: pod_ready_for_init
+      until: (pod_ready_for_init.stdout | from_json)['containerStatuses'] is defined
+      retries: 10
+      delay: 2
+
+    - name: Initialize vault
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: vault operator init -n 1 -t 1 -format json
+      register: vault_init
+      ignore_errors: True
+
+    - name: Showing tokens
+      ansible.builtin.debug:
+        msg:
+        - "Please note the unseal token : {{ (vault_init.stdout | from_json)['unseal_keys_b64'][0] }}"
+        - "Please note the root-token : '{{ (vault_init.stdout | from_json)['root_token' ] }}'"
+      when: vault_init.rc == 0
+
+    - name: Unseal vault
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: vault operator unseal {{ (vault_init.stdout | from_json)['unseal_keys_b64'][0] }}
+      when: vault_init.rc == 0
+      ignore_errors: True
+
+    - name: Enable jwt authentication in vault
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "export VAULT_TOKEN={{ (vault_init.stdout | from_json)['root_token' ] }} ; vault auth enable jwt"
+      when: vault_init.rc == 0
+
+    - name: Enable kv secrets in vault
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "export VAULT_TOKEN={{ (vault_init.stdout | from_json)['root_token' ] }} ; vault secrets enable -version=2 kv"
+      when: vault_init.rc == 0
+
+    - name: Create hpcs-server vault policy file
+      copy:
+        content: "{{ hpcs_server_policy }}"
+        dest: /tmp/policy
+      when: vault_init.rc == 0
+
+    - name: Copy oidc cert to vault's pod
+      kubernetes.core.k8s_cp:
+        namespace: hpcs
+        pod: vault-0
+        remote_path: /tmp/cert
+        local_path: /etc/certs/hpcs-spire-oidc/selfsigned.crt
+      when: vault_init.rc == 0
+
+    - name: Write oidc config to vault
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "export VAULT_TOKEN={{ (vault_init.stdout | from_json)['root_token'] }} ; vault write auth/jwt/config oidc_discovery_url=https://spire-oidc oidc_discovery_ca_pem=\"$(cat /tmp/cert)\""
+      when: vault_init.rc == 0
+
+    - name: Copy policy file to vault's pod
+      kubernetes.core.k8s_cp:
+        namespace: hpcs
+        pod: vault-0
+        remote_path: /tmp/policy
+        local_path: /tmp/policy
+      when: vault_init.rc == 0
+
+    - name: Write hpcs-server vault policy
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "export VAULT_TOKEN={{ (vault_init.stdout | from_json)['root_token'] }} ; vault policy write hpcs-server /tmp/policy"
+      when: vault_init.rc == 0
+
+    - name: Write hpcs-server vault role
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "export VAULT_TOKEN={{ (vault_init.stdout | from_json)['root_token'] }} ; vault write auth/jwt/role/hpcs-server role_type=jwt user_claim=sub bound_audiences=TESTING bound_subject=spiffe://hpcs/hpcs-server/workload token_ttl=24h token_policies=hpcs-server"
+      when: vault_init.rc == 0
+
+    - name: Check cgroups version
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: vault-0
+        command: sh -c "cat /proc/filesystems | grep cgroup2"
+      register: cgroups_check
+
+    - name: Register node uid and nodename
+      shell: "kubectl get nodes -o json"
+      register: kubectl_node_info
+
+    - name: Register hpcs-server identity
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: spire-server-0
+        container: spire-server
+        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['name'] }}/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector unix:uid:0
+      register: cgroups_check
+      when: cgroups_check.rc == 0
+      ignore_errors: True
+
+    - name: Register hpcs-server identity
+      kubernetes.core.k8s_exec:
+        namespace: hpcs
+        pod: spire-server-0
+        container: spire-server
+        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['name'] }}/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector k8s:pod-name:hpcs-server
+      register: cgroups_check
+      when: cgroups_check.rc == 1
+      ignore_errors: True
+
+    - name: Expose vault's web port
+      kubernetes.core.k8s_service:
+        state: present
+        name: vault-external
+        type: NodePort
+        namespace: hpcs
+        ports:
+        - port: 8200
+          protocol: TCP
+        selector:
+          service: vault
+
+    - name: Create hpcs-server account
+      k8s:
+        state: present
+        src: hpcs-server-account.yaml
+
+    - name: Create hpcs-spire account
+      k8s:
+        state: present
+        src: hpcs-spire-account.yaml
+
+    - name: Create hpcs-server configmap
+      k8s:
+        state: present
+        src: hpcs-server-configmap.yaml
+
+    - name: Create hpcs-server statefulset and pod
+      k8s:
+        state: present
+        src: hpcs-server-statefulset.yaml
+
+    - name: Expose hpcs-server's web port
+      kubernetes.core.k8s_service:
+        state: present
+        name: hpcs-external
+        type: NodePort
+        namespace: hpcs
+        ports:
+        - port: 10080
+          protocol: TCP
+        selector:
+          service: hpcs-server

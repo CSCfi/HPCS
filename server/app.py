@@ -9,6 +9,7 @@ from lib.spire_interactions import (
 from lib import spire_interactions
 from tools.docker_utils import get_build_env_image_digests
 from pyspiffe.spiffe_id.spiffe_id import SpiffeId
+from pyspiffe.workloadapi import default_jwt_source
 
 from tools.config.config import parse_configuration
 from tools.cli.cli import parse_arguments
@@ -29,6 +30,30 @@ if configuration["spire-server"].get("spire-server-bin"):
     spire_interactions.spire_server_bin = configuration["spire-server"][
         "spire-server-bin"
     ]
+
+if configuration["spire-agent"].get("spire-agent-socket"):
+    spire_interactions.jwt_workload_api = default_jwt_source.DefaultJwtSource(
+        workload_api_client=None,
+        spiffe_socket_path=f"unix://{configuration['spire-agent'].get('spire-agent-socket')}",
+        timeout_in_seconds=None,
+    )
+
+else:
+    spire_interactions.jwt_workload_api = default_jwt_source.DefaultJwtSource(
+        workload_api_client=None,
+        spiffe_socket_path="unix:///tmp/spire-agent/public/api.sock",
+        timeout_in_seconds=None,
+    )
+
+if configuration["spire-agent"].get("hpcs-server-spiffeid"):
+    spire_interactions.hpcs_server_spiffeid = configuration["spire-agent"].get(
+        "hpcs-server-spiffeid"
+    )
+
+if configuration["spire-server"].get("socket-path"):
+    spire_interactions.spire_server_socketpath = configuration["spire-server"].get(
+        "socket-path"
+    )
 
 if configuration["spire-server"].get("pre-command"):
     spire_interactions.pre_command = configuration["spire-server"]["pre-command"]
