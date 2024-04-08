@@ -13,7 +13,7 @@ This partnership project involving CSC and Hewlett Packard Enterprise aims to en
 
 ### Architecture
 
-In-depth architecture documentation is available [here](https://github.com/CSCfi/HPCS/docs/architecture/architecture.md)
+In-depth architecture documentation is available [here](/docs/architecture/architecture.md)
 
 ## Demonstration
 
@@ -45,7 +45,7 @@ docker pull ghcr.io/cscfi/hpcs/job-prep:latest
 
 Information about the Spire-Server, the HPCS-Server and the Vault depends on the respective server installation setup choices. For more information on the configuration, please contact your HPCS-Server service provider.
 
-The client configuration is made of 4 main sections, in INI format. In depth description of the configuration files is available [here](https://github.com/CSCfi/HPCS/docs/configuration).
+The client configuration is made of 4 main sections, in INI format. In depth description of the configuration files is available [here](/docs/configuration).
 
 Example of client configuration :
 
@@ -78,7 +78,7 @@ It's composed of 3 sections, covering the three main steps of the process.
 - Prepare, encrypt and ship the input data under `./workdir/jp2a_input` for the user `etellier` on node `nid003044`
 - Run the `jp2a` preapred image on the supercomputer `nid003044` node, specifying application args `/sd-container/encrypted/jp2a_input/image.png --width=100 --output=/sd-container/output/result` (the `jp2a_input` prepared dataset will be available under `/sd-container/encrypted/jp2a_input` at runtime). You also can specify your verifications scripts to run before and after the application here : `[-i/-o] /pfs/lustrep4/scratch/project_462000031/etellier/verification_scripts`
 
-In depth documentation of the cli of the 3 parts are available [here](https://github.com/CSCfi/HPCS/docs/cli).
+In depth documentation of the cli of the 3 parts are available [here](/docs/cli).
 
 ```yaml
 version: '2.4'
@@ -479,7 +479,7 @@ Pull server's image using Docker pull :
 docker pull ghcr.io/cscfi/hpcs/server:latest
 ```
 
-The server configuration is made of 2 main sections, in INI format. In depth description of the configuration files is available [here](https://github.com/CSCfi/HPCS/docs/configuration).
+The server configuration is made of 2 main sections, in INI format. In depth description of the configuration files is available [here](/docs/configuration).
 
 You'll be able to configure your Spire Server interfacing specifying :
 - Address and port of the spire-server API.
@@ -539,7 +539,7 @@ plugins {
 
 To run the server as a standalone Docker, we recommend using docker-compose.
 
-An in depth documentation of the server's cli is available [here](https://github.com/CSCfi/HPCS/docs/configuration).
+An in depth documentation of the server's cli is available [here](/docs/configuration).
 
 This docker-compose file specifies the proper spire-agent configuration to use, the mountpoint of the spire-server directory and the path to the mounted hpcs configuration.
 
