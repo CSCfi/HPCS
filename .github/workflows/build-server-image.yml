@@ -1,5 +1,11 @@
 name: Build and publish HPCS server image
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
 
 env:
   IMAGE_NAME: hpcs/server
