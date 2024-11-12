@@ -1,0 +1,39 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: hpcs
+networking:
+  apiServerAddress: 0.0.0.0
+  apiServerPort: 6444
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+        authorization-mode: "AlwaysAllow"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+  - containerPort: 443
+    hostPort: 443
+  - containerPort: 30001
+    hostPort: 30001
+  - containerPort: 30002
+    hostPort: 30002
+  - containerPort: 30003
+    hostPort: 30003
+  - containerPort: 30004
+    hostPort: 30004
+  kubeadmConfigPatchesJSON6902:
+  - group: kubeadm.k8s.io
+    version: v1beta3
+    kind: ClusterConfiguration
+    patch: |
+      - op: add
+        path: /apiServer/certSANs/-
+        value: MY_PUBLIC_IP
+      - op: add
+        path: /apiServer/certSANs/-
+        value: MY_PUBLIC_HOSTNAME
