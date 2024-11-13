@@ -24,16 +24,24 @@ After cloning the repository unlock the secrets with
 
 Put public SSH keys with admin access to the `secrets/public_keys` file.
 If you want some users to have just access to tunnel ports from the VM, add their keys to the `secrets/tunnel_keys` file, if not just `touch secrets/tunnel_keys`.
-After both of those files are present, you should be able to deploy the VM:
+After both of those files are present, you should be able to deploy the VM.
+Authenticate first:
 
     # authenticate
     -> source project_2007468-openrc.sh
     # for simplicity of this example we just export S3 creentials
     -> export AWS_ACCESS_KEY_ID=$(pass fancy_project/aws_key)
     -> export AWS_SECRET_ACCESS_KEY=$(pass fancy_project/aws_secret)
-    # init
-    -> terraform init
-    # apply
+
+For clean environment on the backend, instance name is defined using an included script `set-name.sh`.
+Backend doesn't allow to just use variables for the backend file name, that is why we need to define it before executing `Terraform`.
+
+    -> ./set-name.sh --name kitten --project <project id>
+    Call: terraform init [-reconfigure] -backend-config=tf-backend.tfvars
+    -> terraform init -reconfigure -backend-config=tf-backend.tfvars
+
+Now you can just deploy
+
     -> terraform apply
 
 And wait for things to finish, including package udpates and installations on the VM.
