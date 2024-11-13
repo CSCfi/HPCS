@@ -16,6 +16,8 @@
 
 # terraform
 .terraform*
+## local variables
+terraform/*.tfvars
 ## user specific secrets
 terraform/secrets/public_keys
 terraform/secrets/tunnel_keys

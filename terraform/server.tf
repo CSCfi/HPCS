@@ -30,13 +30,11 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "2010986-terraform-state"
     # Pouta/Swift specifics
     region                      = "regionOne"
     skip_region_validation      = true
     skip_credentials_validation = true
     endpoint                    = "a3s.fi"
-    key                         = "hpcs.main.tfstate"
   }
 }
 
@@ -222,16 +220,6 @@ resource "openstack_networking_secgroup_rule_v2" "ssh-in-pa-vpn-00" {
   port_range_min    = 22
   port_range_max    = 22
   remote_ip_prefix  = "193.166.83.0/24"
-  security_group_id = openstack_networking_secgroup_v2.security_group.id
-}
-
-resource "openstack_networking_secgroup_rule_v2" "ssh-in-jaroslaw-00" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 22
-  port_range_max    = 22
-  remote_ip_prefix  = "87.94.57.247/24"
   security_group_id = openstack_networking_secgroup_v2.security_group.id
 }
 

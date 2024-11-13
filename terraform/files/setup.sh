@@ -13,6 +13,7 @@ sed -i -e "s/MY_PUBLIC_HOSTNAME/${MY_PUBLIC_HOSTNAME}/" "${HOME}/hpcs-cluster.ya
 
 yq --yaml-output ".clusters[0].cluster.server = \"https://${MY_PUBLIC_HOSTNAME}:6444\"" "${HOME}/.kube/config" > "${HOME}/.kube/remote-config"
 
+# Install dashboard
 helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
 helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
 kubectl apply -f /etc/hpcs/admin-user.yaml
