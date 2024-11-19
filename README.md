@@ -191,7 +191,7 @@ To run one of the containers :
 docker compose run --rm [data/container/job]-prep
 ```
 
-If you want to run the whole process by yourself : 
+If you want to run the whole process by yourself :
 
 ```bash
 docker compose run --rm data-prep
@@ -203,9 +203,10 @@ An example demonstration is available [here](https://asciinema.org/a/PWDzxlaVQmf
 
 ### Server
 
-HPCS Server is an API, interfacing HPCS client with Vault and Spire. This section needs basic knowledge of [SPIFFE/SPIRE](https://spiffe.io/) and [HashiCorp Vault](https://www.vaultproject.io/). 
+HPCS Server is an API, interfacing HPCS client with Vault and Spire. This section needs basic knowledge of [SPIFFE/SPIRE](https://spiffe.io/) and [HashiCorp Vault](https://www.vaultproject.io/).
 
 For k8s, we only consider `kubectl` and `ansible` as available tools and that `kubectl` can create pods. Vault roles, spire identities are created automatically.
+For development and demonstrative purposes we provide a `terraform` definition of a VM with an operational kubernetes cluster, for documentation and deployment instructions go [there](terraform).
 
 For docker-compose, we consider the Vault and the Spire Server as setup and the Spire-OIDC provider implemented to allow login to the vault using SVID identity. We also consider that proper roles are created in Vault to authorize HPCS Server to write roles and policies to the Vault, using a server SPIFFEID.
 
@@ -257,77 +258,29 @@ Before proceeding to HPCS' deployment, an original setup is required including :
 - A ready-to-run k8s cluster
 - `kubectl` and `helm` available and able to run kubernetes configurations (`.yaml`)
 - `rbac`, `storage` and `dns` and `helm` kubernetes capabilities, f.e : `microk8s enable rbac storage dns helm` with microk8s.
-  
+
 Please note down the name of your k8s cluster in order to run later deployments.
 
 ##### Configuration
-
-Several configurations are to be reviewed before proceeding.
-- Nginx SSL Certificate path : Please review in `/k8s/spire-server-nginx-configmap.yaml` (section `ssl_certificate`) and `/k8s/spire-server-statefulset.yaml` (section `volumeMounts` of container `hpcs-nginx` and section `volumes` of the pod configuration). If you plan to run the deployment using ansible, please review `/k8s/deploy-all.yaml`, section `Copy oidc cert to vault's pod` and `Create spire-oidc {key, csr, cert}` for the host path to the certificate. Create the directory configured before running deployment.
-  
-- Cluster name : Please review in `/k8s/hpcs-server-configmap.yaml`, section "`agent.conf`", then "`k8s_psat`" and `/k8s/spire-server-configmap.yaml`, section "`server.conf`", then "`k8s_psat`", replace "`docker-desktop`" with your k8s cluster name.
-  
-- For further information about spire agent/ server configurations under `/k8s/hpcs-server-configmap.yaml` and `/k8s/spire-server-configmap.yaml`, please refer to spire-server [configuration reference](https://spiffe.io/docs/latest/deploying/spire_server) and spire-agent [configuration reference](https://spiffe.io/docs/latest/deploying/spire_agent/). 
-
 
 ##### Bash
 
 This part of the documentation walks you through the different steps necessary in order to run a manual deployment of HPCS' serverside (including Vault, Spire-Server and HPCS Server).
 
-__Starting with the "`spire-server`" pods :__
-
-Generate your nginx certificate :
+Generate your certificate :
 ```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /path/to/your/privatekey.key -out /path/to/your/certificate.crt -addext "subjectAltName = DNS:spire-oidc"
+openssl req -x509 -nodes -days 365 -newkey rsa:4096 -keyout hpcs-stack/charts/spire/files/spire-oidc.key -out hpcs-stack/charts/spire/files/spire-oidc.crt -addext "subjectAltName = DNS:spire-oidc"
 ```
-
-Create HPCS namespace :
-```bash
-cd k8s
-kubectl apply -f hpcs-namespace.yaml 
-```
-
-Create Spire service account and cluster role :
-```bash
-kubectl apply -f spire-server-account.yaml -f spire-server-cluster-role.yaml
-```
-
-Create configmaps for spire-server, spire-oidc and nginx proxy :
-```bash
-kubectl apply -f spire-oidc-configmap.yaml -f spire-server-configmap.yaml -f spire-server-nginx-configmap.yaml 
-```
-
-Create spire-server statefulset, managing spire-server-x pods :
-```bash
-kubectl apply -f spire-server-statefulset.yaml
-```
-
-Expose spire-oidc proxy and spire-server's api over the cluster :
-```bash
-kubectl apply -f spire-server-service.yaml -f spire-oidc-service.yaml
-```
-
-At this point, you should be able to see at least one `spire-server-x` pod, f.e :
-
-```bash
-kubectl get -n hpcs pod/spire-server-0
-NAME             READY   STATUS    RESTARTS      AGE
-spire-server-0   3/3     Running   0             30s
-```
-
-And the port on which the spire-server API is exposed (here 31140) :
-```bash
-kubectl get -n hpcs service/spire-server  
-NAME           TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-spire-server   LoadBalancer   10.99.214.248   localhost     8081:31140/TCP   30s
-```
-
-__Then install Hashicorp Vault via it's official helm chart (here with microk8s):__
 
 Add hashicorp repo and run installation :
 ```bash
-microk8s helm3 repo add hashicorp https://helm.releases.hashicorp.com
+helm repo add hashicorp https://helm.releases.hashicorp.com
 helm install vault hashicorp/vault --version 0.27.0 --namespace=hpcs
+```
+
+Install `hpcs-stack` chart :
+```bash
+helm upgrade --install --namespace hpcs --create-namespace hpcs-stack $(git rev-parse --show-toplevel)/k8s/hpcs-stack
 ```
 
 Initialize the Vault :
@@ -341,7 +294,14 @@ Unseal vault :
 kubectl exec -it vault-0 -n hpcs -- vault operator unseal [seal token]
 ```
 
-Connect to the vault to enable jwt auth and kvv2 secrets, register oidc as a source :
+Now double check that `spire-server` installed as part of `hpcs-stack` is actually ready already :
+```bash
+-> kubectl get --namespace hpcs pods/spire-server-0
+NAME             READY   STATUS    RESTARTS   AGE
+spire-server-0   3/3     Running   0          73m
+```
+
+If it's ready you can connect to the vault to enable jwt auth and kvv2 secrets, register oidc as a source :
 ```bash
 kubectl exec -it vault-0 -n hpcs -- sh
 export VAULT_TOKEN="[root token]"
@@ -358,17 +318,6 @@ vault write auth/jwt/config oidc_discovery_url=https://spire-oidc oidc_discovery
 ...
 -----END CERTIFICATE-----
 "
-```
-
-Expose Vault's API to the node :
-```bash
-kubectl expose service vault --name="vault-external" --type="NodePort" --target-port 8200 -n hpcs
-```
-
-At this point, Vault is running and it's API is exposed, to check on which port, run :
-```bash           
-NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
-vault-external   NodePort   10.111.198.147   localhost        8200:31819/TCP,8201:31587/TCP   2s
 ```
 
 __Next step is to create a spire identity and it's vault role in order to be able to identify HPCS-Server against Vault__
@@ -408,46 +357,19 @@ path "sys/policies/acl/*" {
 en_policies=hpcs-server
 ```
 
-__You can now deploy HPCS server__
+You can now wait for HPCS server to finish setting up :
 
-Create hpcs-server and hpcs-spire service accounts :
 ```bash
-kubectl apply -f hpcs-server-account.yaml -f hpcs-spire-account.yaml 
-```
-
-Create hpcs server configmap :
-```bash
-kubectl apply -f hpcs-server-configmap.yaml
-```
-
-Create hpcs-server statefulset (and underlying pods) :
-```bash
-kubectl apply -f hpcs-server-statefulset.yaml
-```
-
-Expose hpcs-server api over the cluster :
-```bash
-kubectl apply -f hpcs-server-service.yaml
-```
-
-Expose hpcs-server service over the node :
-```bash
-kubectl expose service hpcs-server --name="hpcs-server-external" --type="NodePort" --target-port 10080 -n hpcs
-```
-
-Check exposed port :
-```bash           
-NAME             TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)                         AGE
-hpcs-server-external   NodePort   10.111.198.151   localhost        10080:31827/TCP   2s
+-> kubectl get --namespace hpcs pods/hpcs-server-0
+NAME            READY   STATUS    RESTARTS      AGE
+hpcs-server-0   1/1     Running   3 (75m ago)   75m
 ```
 
 That's it, you can now use HPCS server as you please.
 
 ##### Ansible
 
-:warning: This method is currently still under development. You could run into non-documented issues.
-
-The previously explained steps can be automatically run using an ansible playbook available under `/k8s/deploy-all.yaml`
+The previously explained steps can be automatically run using an ansible [playbook](k8s/deploy-all.yaml).
 
 All the pre-requisites listed before are necessary to run this playbook. If you are running kubernetes using `microk8s`, you will need to create aliases or fake commands for `helm`, for example using a script :
 ```bash
@@ -585,7 +507,7 @@ Using TPM, for example, it is very easy to run automatic node attestation, based
 
 ### Encrypted container
 
-The goal of this project was to leverage Singularity/Apptainer's [encrypted containers](https://docs.sylabs.io/guides/3.4/user-guide/encryption.html). This feature enables the end user to protect the runtime of the container, allowing it to confine unencrypted data within the encrypted container, adding an extra layer of security. 
+The goal of this project was to leverage Singularity/Apptainer's [encrypted containers](https://docs.sylabs.io/guides/3.4/user-guide/encryption.html). This feature enables the end user to protect the runtime of the container, allowing it to confine unencrypted data within the encrypted container, adding an extra layer of security.
 
 Unfortunately for LUMI, this feature relies on different technologies, depending the permission level at which the container is encrypted, this behaviour is documented in the following table for usage on LUMI :
 
@@ -599,7 +521,7 @@ Unfortunately for LUMI, this feature relies on different technologies, depending
 Two main reasons for the issues with the encrypted containers :
 - Cannot run as root on a node (no workaround, as this is a feature of HPC environments).
 - User namespaces are disabled on LUMI (for secure reason, [this stackexchange](https://security.stackexchange.com/questions/267628/user-namespaces-do-they-increase-security-or-introduce-new-attack-surface) has some explanations).
-  
+
 To run encrypted containers as described above, we would need to enable user namespaces on the platform. This would require a thorough risk/benefit assessment, since it introduces new attack surfaces and therefore will not be introduced lightly, at least not on on LUMI in the near future.
 
 We mitigate the unavailability of encrypted containers in two steps :
@@ -616,7 +538,7 @@ When a client wants to encrypt its data or container and to give access to it to
 - Client runs containers using cgroupsv2
   - Client runs on Linux
     - `spire-agent api fetch` can be attested using spire-agent binary's `sha256sum`
-    - `python3 ./utils/spawn_agent.py` can't be attested since the `sha256sum` recognised by the workload API is `python3`'s. A mitigation to that would be to compile the code, if possible. This would potentially provide a unique binary that would then be able to be attested using `sha256sum` 
+    - `python3 ./utils/spawn_agent.py` can't be attested since the `sha256sum` recognised by the workload API is `python3`'s. A mitigation to that would be to compile the code, if possible. This would potentially provide a unique binary that would then be able to be attested using `sha256sum`
   - Client runs on MacOS
     - No attestation is doable at the moment since MacOS doesn't support docker and runs container inside of a Linux VM
       - Using cgroupsv2
