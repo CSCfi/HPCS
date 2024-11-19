@@ -1,0 +1,33 @@
+name: Build and publish HPCS server image
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  general_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checking for newlines at the end of files
+        run: if (for file in $(find . -type f -not -path './.git/*' -not -path './.git-crypt/*' -not -path './terraform/secrets/*') ; do [ "$(tail -c 1 < "${file}")" == "" ] || echo "${file} has no newline at the end..." ; done) | grep . ; then exit 1 ; fi
+      - name: Checking for trailing whitespaces
+        run: if find . -type f -not -path './.git/*' -exec egrep -l " +$" {} \; | grep . ; then exit 1 ; fi
+
+      - name: Running shellcheck on *.sh files
+        run: |
+          find . -name .git -type d -prune -o -type f -name \*.sh -print0 |
+          xargs -0 -r -n1 shellcheck
+  helm_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: run helm lint on hpcs-stack
+        run: docker run --rm -v $(pwd)/k8s:/apps alpine/helm:latest lint hpcs-stack
+  terraform_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: run terraform fmt
+        run: docker run --rm -v $(pwd):/data docker.io/hashicorp/terraform fmt -check /data/terraform
