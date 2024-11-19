@@ -2,7 +2,7 @@
 
 Using the cli directly isn't recommended, the supported way is through docker's entrypoint.
 
-The container preparation cli allows the user to create/encrypt/ship a HPCS ready image based on any OCI image. 
+The container preparation cli allows the user to create/encrypt/ship a HPCS ready image based on any OCI image.
 
 ```
 usage: prepare_container.py [-h] --base-oci-image BASE_OCI_IMAGE --sif-path SIF_PATH [--encrypted] [--docker-path DOCKER_PATH]

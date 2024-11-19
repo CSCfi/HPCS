@@ -24,7 +24,7 @@ server-role = hpcs-server
 
 ## Reference
 
-### `spire-server` 
+### `spire-server`
 
 This section describes the connection to the spire-server
 - `address` : address of the spire-server

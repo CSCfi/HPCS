@@ -60,7 +60,7 @@ Will create a slurm job with the following configuration :
 - As etellier
 - for an hour
 
-Also : 
+Also :
 - HPCS will run the job using `/scratch/project_462000031/etellier` as its workdir
 - The application will be handled using info file at `/pfs/lustrep4/scratch/project_462000031/etellier/encrypted_prepared_jp2a.sif.info.yaml`
 - The application will be handled using info file at `/pfs/lustrep4/scratch/project_462000031/etellier/encrypted_jp2a_input.tgz.info.yaml`
