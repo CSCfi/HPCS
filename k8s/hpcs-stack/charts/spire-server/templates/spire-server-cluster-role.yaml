@@ -11,7 +11,6 @@ rules:
 - apiGroups: [""]
   resources: ["configmaps","pods","nodes"]
   verbs: ["patch", "get", "list"]
-
 ---
 # Binds above cluster role to spire-server service account
 kind: ClusterRoleBinding
@@ -21,7 +20,6 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: spire-server
-  namespace: hpcs
 roleRef:
   kind: ClusterRole
   name: spire-server-trust-role

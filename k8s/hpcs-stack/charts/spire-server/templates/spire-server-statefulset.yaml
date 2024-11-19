@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: spire-server
-  namespace: hpcs
   labels:
     app: spire-server
 spec:
@@ -13,7 +12,6 @@ spec:
   serviceName: spire-server
   template:
     metadata:
-      namespace: hpcs
       labels:
         app: spire-server
     spec:
@@ -33,15 +31,16 @@ spec:
               mountPath: /certs
               readOnly: true
           ports:
-            - containerPort: 443
+            - containerPort: {{ .Values.oidc.port }}
               name: hpcs-nginx
         - name: spire-server
-          image: ghcr.io/spiffe/spire-server:1.9.0
+          image: {{ .Values.server.image.repository }}/spire-server:{{ .Values.server.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           args:
             - -config
             - /run/spire/config/server.conf
           ports:
-            - containerPort: 8081
+            - containerPort: {{ .Values.server.port }}
               name: spire-server
           volumeMounts:
             - name: spire-config
@@ -56,7 +55,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /live
-              port: 8080
+              port: {{ .Values.server.health.port }}
             failureThreshold: 2
             initialDelaySeconds: 15
             periodSeconds: 60
@@ -64,11 +63,12 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8080
+              port: {{ .Values.server.health.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
         - name: spire-oidc
-          image: ghcr.io/spiffe/oidc-discovery-provider:1.9.0
+          image: {{ .Values.server.image.repository }}/oidc-discovery-provider:{{ .Values.server.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           args:
           - -config
           - /run/spire/oidc/config/oidc-discovery-provider.conf
@@ -85,7 +85,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8008
+              port: {{ .Values.server.health.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3
@@ -110,10 +110,9 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: spire-data
-        namespace: hpcs
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: {{ .Values.server.storageSize }}

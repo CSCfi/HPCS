@@ -3,12 +3,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: spire-server
-  namespace: hpcs
 spec:
   type: LoadBalancer
   selector:
     app: spire-server
   ports:
     - name: tcp-spire
-      port: 8081
+      port: {{ .Values.server.port }}
       targetPort: spire-server

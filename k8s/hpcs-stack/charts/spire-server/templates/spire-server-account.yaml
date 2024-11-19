@@ -1,5 +1,4 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: hpcs-server
-  namespace: hpcs
+  name: spire-server

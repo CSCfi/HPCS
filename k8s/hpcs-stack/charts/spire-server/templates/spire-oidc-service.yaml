@@ -2,13 +2,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: hpcs-server
-  namespace: hpcs
+  name: spire-oidc
 spec:
-  clusterIP: None
+  type: LoadBalancer
   selector:
-    app: hpcs-server
+    app: spire-server
   ports:
     - name: https
-      port: 10080
-      targetPort: hpcs-server
+      port: {{ .Values.oidc.port }}
+      targetPort: hpcs-nginx
