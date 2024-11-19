@@ -2,13 +2,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: hpcs-server
-  namespace: hpcs
 data:
   hpcs-server.conf: |
     [spire-server]
-    address = localhost
-    port = 8081
-    trust-domain = hpcs
+    address = {{ .Values.server.spire.address }}
+    port = {{ .Values.server.spire.port }}
+    trust-domain = {{ .Values.server.spire.trustDomain }}
     pre-command = ""
     spire-server-bin = spire-server
     socket-path = /var/run/sockets/server/api.sock
@@ -17,16 +16,16 @@ data:
     spire-agent-socket = /run/sockets/agent/agent.sock
 
     [vault]
-    url = http://vault:8200
-    server-role = hpcs-server
+    url = {{ .Values.server.vault.address }}:{{ .Values.server.vault.port }}
+    server-role = {{ .Values.server.vault.role }}
 
   agent.conf: |
     agent {
       data_dir = "./data/agent"
-      log_level = "DEBUG"
-      trust_domain = "hpcs"
-      server_address = "spire-server"
-      server_port = 8081
+      log_level = "{{ .Values.agent.logLevel }}"
+      trust_domain = "{{ .Values.server.spire.trustDomain }}"
+      server_address = "{{ .Values.agent.server.address }}"
+      server_port = {{ .Values.agent.server.port }}
       socket_path = "/var/run/sockets/agent/agent.sock"
       admin_socket_path = "/var/run/sockets/admin/admin.sock"
 
@@ -44,7 +43,7 @@ data:
 
       NodeAttestor "k8s_psat" {
         plugin_data {
-          cluster = "docker-desktop"
+          cluster = "{{ .Values.agent.clusterName }}"
         }
       }
 

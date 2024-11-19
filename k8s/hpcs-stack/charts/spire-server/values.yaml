@@ -1,0 +1,21 @@
+oidc:
+  logLevel: debug
+  port: 443
+server:
+  image:
+    repository: ghcr.io/spiffe
+    # tag of the image, defaults to .Chart.AppVersion
+    # tag:
+    pullPolicy: IfNotPresent
+
+  bindAddress: "0.0.0.0"
+  port: 8081
+  trustDomain: hpcs
+  logLevel: DEBUG
+  caKeyType: rsa-4096
+  defaultJWTttl: "1h"
+  clusterName: hpcs
+  health:
+    bindAddress: "0.0.0.0"
+    port: 8080
+  storageSize: "1G"
