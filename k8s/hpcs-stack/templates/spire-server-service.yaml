@@ -1,0 +1,16 @@
+# Service definition for spire server
+apiVersion: v1
+kind: Service
+metadata:
+  name: spire-server
+spec:
+  type: {{ .Values.spire.server.service.type }}
+  selector:
+    app: spire-server
+  ports:
+    - name: tcp-spire
+      port: {{ .Values.spire.server.port }}
+      targetPort: spire-server
+      {{- if eq .Values.spire.server.service.type "NodePort" }}
+      nodePort: {{ .Values.spire.server.service.port }}
+      {{- end -}}
