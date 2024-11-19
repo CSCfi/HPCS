@@ -4,10 +4,13 @@ kind: Service
 metadata:
   name: hpcs-server
 spec:
-  clusterIP: None
+  type: {{ .Values.hpcs.service.type }}
   selector:
     app: hpcs-server
   ports:
     - name: https
-      port: {{ .Values.server.port }}
+      port: {{ .Values.hpcs.server.port }}
       targetPort: hpcs-server
+      {{- if eq .Values.hpcs.service.type "NodePort" }}
+      nodePort: {{ .Values.hpcs.service.port }}
+      {{- end -}}
