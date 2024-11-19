@@ -104,9 +104,8 @@ spec:
           configMap:
             name: spire-oidc
         - name: nginx-certs
-          hostPath:
-            path: /etc/certs/hpcs-spire-oidc
-            type: DirectoryOrCreate
+          secret:
+            secretName: spire-oidc-certs
   volumeClaimTemplates:
     - metadata:
         name: spire-data

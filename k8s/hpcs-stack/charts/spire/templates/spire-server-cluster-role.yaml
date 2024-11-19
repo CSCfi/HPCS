@@ -20,6 +20,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: spire-server
+  namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: spire-server-trust-role
