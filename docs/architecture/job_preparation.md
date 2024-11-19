@@ -23,10 +23,10 @@ sequenceDiagram
         Job Preparation container ->> Job Preparation container: Parse info from info file
         Job Preparation container ->> Job Preparation container: Generate SBATCH file from template based on info gathered
         Job Preparation container ->> Login Node: Copy SBATCH File and HPCS Configuration file
-        Login Node ->> Job Preparation container: 
+        Login Node ->> Job Preparation container:
         Job Preparation container ->> Job Preparation container: Generate keypair for output data
         Job Preparation container ->> Login Node: Copy encryption key
-        Login Node ->> Job Preparation container: 
+        Login Node ->> Job Preparation container:
     end
 
     rect rgb(191, 223, 255)
@@ -68,13 +68,13 @@ sequenceDiagram
         Application container ->> Application container: Encrypt output directory
         Application container -->> Compute node: Finishes
         Compute node -->> Spire Agent: Kills
-        Spire Agent -->> Compute node: 
+        Spire Agent -->> Compute node:
         Spire Agent -->> Compute node: Dies
         Compute node ->> Scheduler: Becomes available
         deactivate Job Preparation container
     end
     Job Preparation container ->> Login Node: Close SSH connection
-    Login Node ->> Job Preparation container: 
+    Login Node ->> Job Preparation container:
     Login Node ->> Job Preparation container: Close SSH connection
 
     Job Preparation container -->> User: Finishes
