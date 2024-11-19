@@ -7,10 +7,12 @@ PATH="$PATH:/sd-container/tools/input_logic/"
 echo "[SD-Container][Input-Logic] : Getting data decryption key from vault"
 
 # Get token via vault login. The data_login environment variable need to be exported from calling script
-data_token=$(curl -s --request POST --data "$data_login" $vault/v1/auth/jwt/login | jq '.auth.client_token' -r) || exit 1
+# shellcheck disable=SC2154 # data_login and vault are actually environment variables someone at some point decided to use lower case letters for <- TODO: fix this
+data_token=$(curl -s --request POST --data "$data_login" "$vault/v1/auth/jwt/login" | jq '.auth.client_token' -r) || exit 1
 
 # Use the token to access the key. The data_path environment variable needs to be exported from calling script
-data_key=$(curl -s -H "X-Vault-Token: $data_token" $vault/v1/kv/data/${data_path} | jq '.data.data.key' -r) || exit 1
+# shellcheck disable=SC2154 # data_path and vault are actually environment variables someone at some point decided to use lower case letters for <- TODO: fix this
+data_key=$(curl -s -H "X-Vault-Token: $data_token" "$vault/v1/kv/data/${data_path}" | jq '.data.data.key' -r) || exit 1
 
 # Write the key in an encrypted volume
 echo "$data_key" >/sd-container/encrypted/decryption_key
@@ -26,7 +28,7 @@ rm /sd-container/encrypted/decryption_key
 echo "[SD-Container][Input-Logic] : Data decrypted"
 
 # Untar the not anymore encrypted archive
-cd /sd-container/encrypted
+cd /sd-container/encrypted || exit 1
 tar xvf /sd-container/encrypted/decrypted_data.tgz || exit 1
 
 echo "[SD-Container][Input-Logic] : Data untared"

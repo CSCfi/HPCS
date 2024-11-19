@@ -8,7 +8,7 @@ docker_path="/var/run/docker.sock"
 
 # Argument parser, arguments for both container preparation and key shipping should be handled here.
 parse_args() {
-	while [[ "$#" -gt 0 ]]; do
+	while [ "${#}" -gt 0 ]; do
 		case "$1" in
 		--config)
 			config="$2"
@@ -69,7 +69,7 @@ parse_args() {
 	done
 
 	# Check for required arguments
-	if [ -z "$config" ] || [ -z "$base_oci_image" ] || [ -z "$sif_path" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || ([ -z "$users" ] && [ -z "$groups" ]) || [ -z "$compute_nodes" ]; then
+	if [ -z "$config" ] || [ -z "$base_oci_image" ] || [ -z "$sif_path" ] || [ -z "$data_path" ] || [ -z "$data_path_at_rest" ] || { [ -z "$users" ] && [ -z "$groups" ]; } || [ -z "$compute_nodes" ]; then
 		echo echo "Please provides options for both of these programs : "
 		python3 ./prepare_container.py --help
 		python3 ./utils/ship_a_key.py --help
@@ -79,7 +79,7 @@ parse_args() {
 
 # Cleanup spire-agent generated files
 end_entrypoint() {
-	if ! [ -n "$encrypted" ]; then
+	if [ -z "$encrypted" ]; then
 		echo "No encryption, nothing to clean"
 	else
 		echo "Cleaning everything before leaving ..."
@@ -100,21 +100,21 @@ NC='\033[0m' # No Color
 # Parse arguments from cli
 parse_args "$@"
 
-echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Entering entrypoint"
+printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Entering entrypoint"
 
 #
 ## [RUN] Perform node attestation (spawn agent, register it's and it's workload's spiffeID)
 #
 
 if [ -n "$encrypted" ]; then
-	echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on. Registering and running SPIRE Agent"
+	printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on. Registering and running SPIRE Agent"
 
-	python3 ./utils/spawn_agent.py --config $config >/dev/null 2>/dev/null &
+	python3 ./utils/spawn_agent.py --config "$config" >/dev/null 2>/dev/null &
 	spire_agent_pid=$!
 
 fi
 
-ps $spire_agent_pid >/dev/null || (
+ps "$spire_agent_pid" >/dev/null || (
 	echo "spire agent died, aborting"
 	end_entrypoint "$spire_agent_pid" 1
 )
@@ -123,7 +123,7 @@ ps $spire_agent_pid >/dev/null || (
 ## [END] Perform node attestation
 #
 
-echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Run container preparation"
+printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Run container preparation"
 
 #
 ## [RUN] Run container preparation (Preparation of new image, build of new image, build of Apptainer/Singularity image)
@@ -139,7 +139,7 @@ fi
 ## [END] Run container preparation
 #
 
-echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Container preparation ended"
+printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Container preparation ended"
 
 #
 ## [RUN] Ship private key to the vault (Creation of workload identity to give access to the key, writing key to the vault)
@@ -150,29 +150,29 @@ if [ -n "$encrypted" ]; then
 fi
 
 if [ -z "$encrypted" ]; then
-	echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is off, nothing to do"
+	printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is off, nothing to do"
 
 else
-	echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on, writing key to the vault, using spiffeID $spiffeID"
+	printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Encryption mode is on, writing key to the vault, using spiffeID $spiffeID"
 
 	if [ -z "$users" ]; then
 		# If the user provided only groups
-		python3 ./utils/ship_a_key.py --config $config --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+		python3 ./utils/ship_a_key.py --config "$config" --username "$username" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 	elif [ -z "$groups" ]; then
 		# If the user provided only users
-		python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+		python3 ./utils/ship_a_key.py --config "$config" --username "$username" -u "$users" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 	else
 		# If the user provided both
-		python3 ./utils/ship_a_key.py --config $config --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
+		python3 ./utils/ship_a_key.py --config "$config" --username "$username" -u "$users" -g "$groups" -c "$compute_nodes" --data-path "$data_path" --data-path-at-rest "$data_path_at_rest" -i "$spiffeID" || end_entrypoint "$spire_agent_pid" 1
 	fi
 
-	echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Key written to the vault"
+	printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Key written to the vault"
 fi
 
 #
 ## [END] Ship private key to the vault
 #
 
-echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Leaving entrypoint"
+printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Leaving entrypoint"
 
 end_entrypoint "$spire_agent_pid" 0

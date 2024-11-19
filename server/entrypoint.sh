@@ -21,11 +21,14 @@ rm -rf /tmp/data
 spire-agent run -config /tmp/agent.conf || end_entrypoint 0 1 &
 spire_agent_pid=$!
 
-agent_socket_path=$(cat /tmp/agent.conf | grep "socket_path" | cut -d "=" -f2 | cut -d '"' -f1)
+agent_socket_path=$(grep "socket_path" /tmp/agent.conf | cut -d "=" -f2 | cut -d '"' -f1)
+
+RED='\033[0;31m'
+NC='\033[0m'
 
 sleep 10
-until [ -e $agent_socket_path ]; do
-	echo -e "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
+until [ -e "${agent_socket_path}" ]; do
+	printf "%b[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds %b" "${RED}" "${NC}\n"
 	sleep 10
 done
 
