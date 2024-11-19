@@ -9,67 +9,7 @@
       }
 
   tasks:
-    - name: create hpcs namespace
-      k8s:
-        state: present
-        src: hpcs-namespace.yaml
-
-    - name: create spire-server account
-      k8s:
-        state: present
-        src: spire-server-account.yaml
-
-    - name: create spire-server clusterrole
-      k8s:
-        state: present
-        src: spire-server-cluster-role.yaml
-
-    - name: create spire-server configmap
-      k8s:
-        state: present
-        src: spire-server-configmap.yaml
-
-    - name: create spire-oidc configmap
-      k8s:
-        state: present
-        src: spire-oidc-configmap.yaml
-
-    - name: create spire nginx proxy configmap
-      k8s:
-        state: present
-        src: spire-server-nginx-configmap.yaml
-
-    - name: Create spire-oidc private key
-      openssl_privatekey:
-          path: /etc/certs/hpcs-spire-oidc/selfsigned.key
-          size: 4096
-
-    - name: Create spire-oidc csr
-      openssl_csr:
-          path: /etc/certs/hpcs-spire-oidc/selfsigned.csr
-          privatekey_path: /etc/certs/hpcs-spire-oidc/selfsigned.key
-
-    - name: Create spire-oidc certificate
-      openssl_certificate:
-          provider: selfsigned
-          path: /etc/certs/hpcs-spire-oidc/selfsigned.crt
-          privatekey_path: /etc/certs/hpcs-spire-oidc/selfsigned.key
-          csr_path: /etc/certs/hpcs-spire-oidc/selfsigned.csr
-
-    - name: create spire-server pod (spire-server, spire-oidc, hpcs-nginx)
-      k8s:
-        state: present
-        src: spire-server-statefulset.yaml
-
-    - name: create spire-server service (expose spire server port)
-      k8s:
-        state: present
-        src: spire-server-service.yaml
-
-    - name: create spire-server service (expose spire oidc port)
-      k8s:
-        state: present
-        src: spire-oidc-service.yaml
+    - include_tasks: create-certs.yaml
 
     - name: Add hashicorp to helm repositories
       kubernetes.core.helm_repository:
@@ -81,10 +21,11 @@
         release_name: vault
         chart_ref: hashicorp/vault
         release_namespace: hpcs
+        create_namespace: true
         chart_version: 0.27.0
 
     - name: Wait for vault to be created
-      shell: "kubectl get po -n hpcs vault-0 --output=jsonpath='{.status}'"
+      shell: "kubectl get --namespace hpcs pod/vault-0 --output=jsonpath='{.status}'"
       register: pod_ready_for_init
       until: (pod_ready_for_init.stdout | from_json)['containerStatuses'] is defined
       retries: 10
@@ -133,12 +74,27 @@
         dest: /tmp/policy
       when: vault_init.rc == 0
 
+    - name: Deploy hpcs-stack
+      kubernetes.core.helm:
+        release_name: hpcs-stack
+        chart_ref: hpcs-stack
+        release_namespace: hpcs
+        create_namespace: true
+
+    - name: Wait for spire-oidc to be ready
+      shell: "kubectl get --namespace hpcs pod/spire-server-0 --output=jsonpath='{.status.containerStatuses[*].ready}'"
+      register: pod_spire_oidc
+      until: pod_spire_oidc.stdout == "true true true"
+      # until: (pod_spire_oidc.stdout | from_json)['containerStatuses'][?name==spire-oidc]['ready']
+      retries: 10
+      delay: 2
+
     - name: Copy oidc cert to vault's pod
       kubernetes.core.k8s_cp:
         namespace: hpcs
         pod: vault-0
         remote_path: /tmp/cert
-        local_path: /etc/certs/hpcs-spire-oidc/selfsigned.crt
+        local_path: hpcs-stack/charts/spire/files/spire-oidc.crt
       when: vault_init.rc == 0
 
     - name: Write oidc config to vault
@@ -186,7 +142,7 @@
         namespace: hpcs
         pod: spire-server-0
         container: spire-server
-        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['name'] }}/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector unix:uid:0
+        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/hpcs/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector unix:uid:0
       register: cgroups_check
       when: cgroups_check.rc == 0
       ignore_errors: True
@@ -196,51 +152,7 @@
         namespace: hpcs
         pod: spire-server-0
         container: spire-server
-        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['name'] }}/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector k8s:pod-name:hpcs-server
+        command: ./bin/spire-server entry create -parentID spiffe://hpcs/spire/agent/k8s_psat/hpcs/{{ (kubectl_node_info.stdout | from_json)['items'][0]['metadata']['uid'] }} -spiffeID spiffe://hpcs/hpcs-server/workload -selector k8s:pod-name:hpcs-server
       register: cgroups_check
       when: cgroups_check.rc == 1
       ignore_errors: True
-
-    - name: Expose vault's web port
-      kubernetes.core.k8s_service:
-        state: present
-        name: vault-external
-        type: NodePort
-        namespace: hpcs
-        ports:
-        - port: 8200
-          protocol: TCP
-        selector:
-          service: vault
-
-    - name: Create hpcs-server account
-      k8s:
-        state: present
-        src: hpcs-server-account.yaml
-
-    - name: Create hpcs-spire account
-      k8s:
-        state: present
-        src: hpcs-spire-account.yaml
-
-    - name: Create hpcs-server configmap
-      k8s:
-        state: present
-        src: hpcs-server-configmap.yaml
-
-    - name: Create hpcs-server statefulset and pod
-      k8s:
-        state: present
-        src: hpcs-server-statefulset.yaml
-
-    - name: Expose hpcs-server's web port
-      kubernetes.core.k8s_service:
-        state: present
-        name: hpcs-external
-        type: NodePort
-        namespace: hpcs
-        ports:
-        - port: 10080
-          protocol: TCP
-        selector:
-          service: hpcs-server
