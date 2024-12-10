@@ -13,7 +13,7 @@ COPY ./utils /job_preparation/utils
 
 # Install necessary packages
 RUN apk add --no-cache \
-    git=2.45.2-r0 \
+    git=2.47.1-r0 \
     curl=8.11.0-r2 \
     jq=1.7.1-r0 \
     build-base=0.5-r3 \
