@@ -11,14 +11,20 @@ WORKDIR /job_preparation
 # Copy utils for SPIFFEID creation ...
 COPY ./utils /job_preparation/utils
 
-# Install necessary packages and rust
+# Install necessary packages
 RUN apk add --no-cache \
-    curl=8.5.0-r0 \
+    git=2.45.2-r0 \
+    curl=8.11.0-r2 \
+    jq=1.7.1-r0 \
     build-base=0.5-r3 \
-    libffi-dev=3.4.4-r3 && \
-curl https://sh.rustup.rs -sSf -o rustup.sh ; chmod +x rustup.sh ; ./rustup.sh -y ; export PATH="$PATH":/root/.cargo/bin && \
-pip install --no-cache-dir -r ./requirements.txt && \
-rm -r /root/.cargo /root/.rustup
+    libffi-dev=3.4.6-r0
+# Install python things (and rust temporarily)
+RUN curl https://sh.rustup.rs -sSf -o rustup.sh && \
+    chmod +x rustup.sh && \
+    ./rustup.sh -y && \
+    export PATH="$PATH:/root/.cargo/bin" && \
+    pip install --no-cache-dir -r ./requirements.txt && \
+    rm -r /root/.cargo /root/.rustup
 
 # Set entrypoint
 ENTRYPOINT [ "python3", "./prepare_job.py" ]

@@ -25,8 +25,9 @@ def generate_prepared_dockerfile(
 
     # Read the current image to extract the entrypoint
     # Depending on image configuration, Entrypoint can be found at different place
-    base_entrypoint = base_image.attrs["ContainerConfig"]["Entrypoint"]
-    if base_entrypoint == None:
+    if "ContainerConfig" in base_image.attrs:
+        base_entrypoint = base_image.attrs["ContainerConfig"]["Entrypoint"]
+    else:
         base_entrypoint = base_image.attrs["Config"]["Entrypoint"]
 
     # Starting to write the prepared container Dockerfile

@@ -1,0 +1,24 @@
+- name: Create directory for certificates if it is not there
+  file:
+    path: hpcs-stack/charts/spire/files
+    state: directory
+    mode: '0770'
+
+- name: Create spire-oidc private key
+  openssl_privatekey:
+      path: hpcs-stack/charts/spire/files/spire-oidc.key
+      size: 4096
+
+- name: Create spire-oidc csr
+  openssl_csr:
+    path: hpcs-stack/charts/spire/files/spire-oidc.csr
+    privatekey_path: hpcs-stack/charts/spire/files/spire-oidc.key
+    common_name: spire-oidc
+    subject_alt_name: 'DNS:spire-oidc'
+
+- name: Create spire-oidc certificate
+  openssl_certificate:
+      provider: selfsigned
+      path: hpcs-stack/charts/spire/files/spire-oidc.crt
+      privatekey_path: hpcs-stack/charts/spire/files/spire-oidc.key
+      csr_path: hpcs-stack/charts/spire/files/spire-oidc.csr

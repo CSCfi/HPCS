@@ -2,7 +2,6 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: hpcs-nginx
-  namespace: hpcs
 data:
   nginx.conf: |
     events {}
@@ -15,9 +14,9 @@ data:
       }
 
       server{
-        listen 443 ssl;
-        ssl_certificate /certs/selfsigned.crt;
-        ssl_certificate_key /certs/selfsigned.key;
+        listen {{ .Values.oidc.port }} ssl;
+        ssl_certificate /certs/tls.crt;
+        ssl_certificate_key /certs/tls.key;
         ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
         ssl_ciphers HIGH:!aNULL:!MD5;
         location / {

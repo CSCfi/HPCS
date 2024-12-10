@@ -1,0 +1,22 @@
+image:
+  repository: ghcr.io/cscfi/hpcs
+  # tag of the image, defaults to .Chart.AppVersion
+  # tag:
+  pullPolicy: IfNotPresent
+server:
+  port: 10080
+  spire:
+    address: localhost
+    port: 8081
+    trustDomain: hpcs
+  vault:
+    address: http://vault
+    port: 8200
+    role: hpcs-server
+agent:
+  logLevel: DEBUG
+  server:
+    address: spire-server
+    port: 8081
+  clusterName: hpcs
+storageSize: "1Gi"

@@ -10,3 +10,19 @@
 
 # Undo-tree save-files
 *.~undo-tree
+
+# openrc configs
+*-openrc.sh
+
+# terraform
+.terraform*
+## local variables
+terraform/*.tfvars
+## user specific secrets
+terraform/secrets/public_keys
+terraform/secrets/tunnel_keys
+
+# Ignore certificates and keys
+*.crt
+*.csr
+*.key

@@ -1,0 +1,16 @@
+# Service definition for spire-oidc (expose the OIDC socket)
+apiVersion: v1
+kind: Service
+metadata:
+  name: spire-oidc
+spec:
+  type: {{ .Values.spire.oidc.service.type }}
+  selector:
+    app: spire-server
+  ports:
+    - name: https
+      port: {{ .Values.spire.oidc.port }}
+      targetPort: hpcs-nginx
+      {{- if eq .Values.spire.oidc.service.type "NodePort" }}
+      nodePort: {{ .Values.spire.oidc.service.port }}
+      {{- end -}}
