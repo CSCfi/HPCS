@@ -8,7 +8,7 @@ Client's configuration has to respect `ini` configuration format and essentially
 [spire-server]
 address = localhost
 port = 31147
-trust-domain = hpcs 
+trust-domain = hpcs
 
 [hpcs-server]
 url = http://localhost:10080
@@ -23,7 +23,7 @@ username = etellier
 
 ## Reference
 
-### `spire-server` 
+### `spire-server`
 
 This section describes the connection to the spire-server
 - `address` : address of the spire-server

@@ -1,5 +1,9 @@
 name: Build and publish HPCS container preparation image
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 env:
   IMAGE_NAME: hpcs/container-prep

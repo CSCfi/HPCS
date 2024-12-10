@@ -1,0 +1,109 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+apt:
+  sources:
+    docker.list:
+      source: deb [arch=amd64] https://download.docker.com/linux/ubuntu $RELEASE stable
+      keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    helm.list:
+      source: deb [arch=amd64] https://baltocdn.com/helm/stable/debian/ all main
+      keyid: 81BF832E2F19CD2AA0471959294AC4827C1A168A # https://baltocdn.com/helm/signing.asc
+packages:
+- ca-certificates
+- containerd.io
+- curl
+- docker-ce
+- docker-ce-cli
+- gnupg
+- helm
+- lsb-release
+- uidmap
+- net-tools
+- yq
+# fun utils
+- git
+- tmux
+- wget
+groups:
+- docker
+users:
+- name: ubuntu
+  lock_passwd: true
+  shell: /bin/bash
+  ssh_authorized_keys:
+%{ for key in public_keys ~}
+  - ${key}
+%{ endfor ~}
+  groups:
+  - docker
+  - sudo
+  sudo:
+  - ALL=(ALL) NOPASSWD:ALL
+- name: k8s-api
+  lock_passwd: true
+  shell: /usr/sbin/nologin
+  ssh_authorized_keys:
+%{ for key in public_keys ~}
+  - ${key}
+%{ endfor ~}
+%{ for key in tunnel_keys ~}
+  - ${key}
+%{ endfor ~}
+ssh_genkeytypes:
+- ed25519
+ssh_keys:
+  ed25519_private: |
+    ${ed25519_private}
+  ed25519_public: ${ed25519_public}
+runcmd:
+- systemctl disable --now docker.service docker.socket
+- rm -f /var/run/docker.sock
+- loginctl enable-linger ubuntu
+- chown ubuntu:root /home/ubuntu # in some versions docker setup has problems without it
+- su - ubuntu -c '/usr/local/sbin/setup.sh'
+write_files:
+- encoding: b64
+  content: ${setup_sha512}
+  owner: root:root
+  path: /etc/setup-sha512
+- content: net.ipv4.ip_unprivileged_port_start=80
+  path: /etc/sysctl.d/unprivileged_port_start.conf
+- encoding: b64
+  content: ${setup_sh}
+  owner: root:root
+  path: /usr/local/sbin/setup.sh
+  permissions: '0755'
+- encoding: b64
+  content: ${hpcs_cluster_yaml}
+  owner: root:root
+  path: /etc/hpcs/hpcs-cluster.yaml
+  permissions: '0644'
+- encoding: b64
+  content: ${kind_dashboard_admin_yaml}
+  owner: root:root
+  path: /etc/hpcs/admin-user.yaml
+  permissions: '0644'
+- source:
+    uri: https://kind.sigs.k8s.io/dl/v0.24.0/kind-Linux-amd64
+  owner: root:root
+  path: /usr/bin/kind
+  permissions: '0755'
+- source:
+    uri: https://dl.k8s.io/v1.31.2/bin/linux/amd64/kubectl
+  owner: root:root
+  path: /usr/bin/kubectl
+  permissions: '0755'
+fs_setup:
+- label: data
+  filesystem: 'ext4'
+  device: /dev/vdb
+  overwrite: false
+- label: docker
+  filesystem: 'ext4'
+  device: /dev/vdc
+  overwrite: false
+mounts:
+- ['LABEL=data', /var/lib/data, "ext4", "defaults"]
+- ['LABEL=docker', /var/lib/docker, "ext4", "defaults"]

@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: hpcs-server
-  namespace: hpcs
   labels:
     app: hpcs-server
 spec:
@@ -13,7 +12,6 @@ spec:
   serviceName: hpcs-server
   template:
     metadata:
-      namespace: hpcs
       labels:
         app: hpcs-server
     spec:
@@ -21,9 +19,10 @@ spec:
       shareProcessNamespace: true
       containers:
         - name: hpcs-server
-          image: ghcr.io/cscfi/hpcs/server:0.1.1
+          image: {{ .Values.image.repository }}/server:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 10080
+            - containerPort: {{ .Values.server.port }}
               name: hpcs-server
           volumeMounts:
             - name: hpcs-server-configs
@@ -53,10 +52,9 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: spire-agent-data
-        namespace: hpcs
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: {{ .Values.storageSize }}
