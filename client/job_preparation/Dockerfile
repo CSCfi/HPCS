@@ -13,11 +13,11 @@ COPY ./utils /job_preparation/utils
 
 # Install necessary packages
 RUN apk add --no-cache \
-    git=2.47.1-r0 \
-    curl=8.11.0-r2 \
+    git=2.47.2-r0 \
+    curl=8.12.1-r1 \
     jq=1.7.1-r0 \
     build-base=0.5-r3 \
-    libffi-dev=3.4.6-r0
+    libffi-dev=3.4.7-r0
 # Install python things (and rust temporarily)
 RUN curl https://sh.rustup.rs -sSf -o rustup.sh && \
     chmod +x rustup.sh && \
