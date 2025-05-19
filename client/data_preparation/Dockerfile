@@ -16,11 +16,11 @@ WORKDIR /data_preparation
 
 # Install necessary packages
 RUN apk add --no-cache \
-    git=2.47.1-r0 \
-    curl=8.11.0-r2 \
+    git=2.47.2-r0 \
+    curl=8.12.1-r1 \
     jq=1.7.1-r0 \
     build-base=0.5-r3 \
-    libffi-dev=3.4.6-r0
+    libffi-dev=3.4.7-r0
 # Install spire-agent
 RUN curl -LsSf -o spire-1.9.0-linux-amd64-musl.tar.gz https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz && \
     tar xvf spire-1.9.0-linux-amd64-musl.tar.gz && \
