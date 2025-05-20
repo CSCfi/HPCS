@@ -34,5 +34,11 @@ def parse_arguments() -> argparse.ArgumentParser:
         help="Path to the docker socket (default : /var/run/docker.sock)",
         default="/var/run/docker.sock",
     )
+    parser.add_argument(
+        "--docker-host-path",
+        type=str,
+        help="Path to the docker socket (default : /var/run/docker.sock)",
+        default="/var/run/docker.sock",
+    )
 
     return parser.parse_args()

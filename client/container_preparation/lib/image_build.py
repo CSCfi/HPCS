@@ -102,6 +102,7 @@ def create_sif_image(
     destination_path,
     docker_client: DockerClient,
     docker_socket_path: str,
+    docker_host_socket_path: str,
     encrypted=False,
 ):
     """Creates an Apptainer SIF image (encrypted or not) using the sd-container/build_env
@@ -130,7 +131,7 @@ def create_sif_image(
 
     # Composing the dictionary of volumes (docker socket for image reading, output directory for result image)
     volumes = [
-        f"{docker_socket_path}:{docker_socket_path}",
+        f"{docker_host_socket_path}:{docker_socket_path}",
         f"{destination_path}:/output",
         "/etc/passwd:/etc/passwd",
         "/etc/group:/etc/group",
