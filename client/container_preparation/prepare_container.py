@@ -13,6 +13,7 @@ if __name__ == "__main__":
     sif_path = arguments.sif_path
     encrypted = arguments.encrypted
     docker_socket_path = arguments.docker_path
+    docker_host_socket_path = arguments.docker_host_path
 
     # Checking the access to the docker socket - avoid waiting for an error to kill the program
     print(f"Checking the access to docker socket at {docker_socket_path}")
@@ -43,6 +44,7 @@ if __name__ == "__main__":
         destination_path=sif_path,
         docker_client=docker_client,
         docker_socket_path=docker_socket_path,
+        docker_host_socket_path=docker_host_socket_path,
         encrypted=encrypted,
     )
 
