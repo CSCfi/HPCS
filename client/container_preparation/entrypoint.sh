@@ -5,6 +5,7 @@
 
 # Default values for arguments
 docker_path="/var/run/docker.sock"
+docker_host_path=${docker_path}
 
 # Argument parser, arguments for both container preparation and key shipping should be handled here.
 parse_args() {
@@ -54,6 +55,10 @@ parse_args() {
 			docker_path="$2"
 			shift 2
 			;;
+		--docker-host-path)
+			docker_host_path="$2"
+			shift 2
+			;;
 		-h | --help)
 			python3 ./prepare_container.py --help
 			python3 ./utils/ship_a_key.py --help
@@ -84,7 +89,14 @@ end_entrypoint() {
 	else
 		echo "Cleaning everything before leaving ..."
 		rm -rf /tmp/data
-		rm /tmp/agent*
+		if [ "${1}" -ne 0 ] ; then
+			timestamp=$(date +%s)
+			mv /tmp/agent.log "/tmp/agent.log-${timestamp}" || true
+			mv /tmp/agent.conf "/tmp/agent.conf-${timestamp}" || true
+		fi
+		for suffix in log conf sock ; do
+			rm "/tmp/agent.${suffix}"
+		done
 		rm -f /tmp/keys
 		rm /tmp/dataset_info.yaml
 		kill "$1"
@@ -130,9 +142,9 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Run co
 #
 
 if [ -z "$encrypted" ]; then
-	python3 ./prepare_container.py -b "$base_oci_image" -s "$sif_path" -d "$docker_path" || end_entrypoint "$spire_agent_pid" 1
+	python3 ./prepare_container.py -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
 else
-	python3 ./prepare_container.py -e -b "$base_oci_image" -s "$sif_path" -d "$docker_path" || end_entrypoint "$spire_agent_pid" 1
+	python3 ./prepare_container.py -e -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
 fi
 
 #
