@@ -137,7 +137,7 @@ async def handle_client_registration():
         # Write the role bound to the workload's spiffeID
         write_client_role(hvac_client, f"client_{client_id}", workload_spiffeID)
 
-        # For each authorized container preparation process (Here, a list of docker container_preaparation image names)
+        # For each authorized container preparation process (Here, a list of docker container_preparation image names)
         for digest in get_build_env_image_digests():
             digest = digest.replace("\n", "")
             workload_selector = f"docker:image_id:{digest}"
