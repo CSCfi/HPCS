@@ -4,10 +4,10 @@ FROM --platform=$BUILDPLATFORM python:3.9-alpine
 
 # Install necessary packages and spire-agent
 RUN apk add --no-cache \
-    git=2.47.2-r0 \
-    curl=8.12.1-r1 \
+    git=2.49.1-r0 \
+    curl=8.14.1-r2 \
     build-base=0.5-r3 \
-    openssl=3.3.3-r0
+    openssl=3.5.4-r0
 # Install spire-agent
 RUN curl -LsSf -o spire-1.9.0-linux-amd64-musl.tar.gz https://github.com/spiffe/spire/releases/download/v1.9.0/spire-1.9.0-linux-amd64-musl.tar.gz && \
     tar xvf spire-1.9.0-linux-amd64-musl.tar.gz && \

@@ -2,5 +2,5 @@ cryptography==42.0.5
 pyOpenSSL==24.0.0
 protobuf==3.20.0
 hvac==2.1.0
-quart==0.19.4
+quart==0.19.9
 pre-commit
