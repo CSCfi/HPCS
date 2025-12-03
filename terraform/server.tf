@@ -22,7 +22,7 @@
 
 # Define required providers
 terraform {
-  required_version = ">= 1.1.5"
+  required_version = ">= 1.1.5, < 1.7.0"
   required_providers {
     openstack = {
       source  = "terraform-provider-openstack/openstack"
@@ -31,10 +31,14 @@ terraform {
   }
   backend "s3" {
     # Pouta/Swift specifics
-    region                      = "regionOne"
+#    region                      = "regionOne"
+    region                      = "1"
     skip_region_validation      = true
     skip_credentials_validation = true
-    endpoint                    = "a3s.fi"
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+    endpoint                    = "https://a3s.fi"
   }
 }
 
@@ -268,6 +272,24 @@ resource "openstack_networking_secgroup_rule_v2" "k8s-api-in-pa-vpn" {
   port_range_min    = 6444
   port_range_max    = 6444
   remote_ip_prefix  = "193.166.83.0/24"
+  security_group_id = openstack_networking_secgroup_v2.security_group.id
+}
+resource "openstack_networking_secgroup_rule_v2" "k8s-api-in-espoo-office-02" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 6444
+  port_range_max    = 6444
+  remote_ip_prefix  = "193.166.2.0/24"
+  security_group_id = openstack_networking_secgroup_v2.security_group.id
+}
+resource "openstack_networking_secgroup_rule_v2" "k8s-api-in-espoo-office-01" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 6444
+  port_range_max    = 6444
+  remote_ip_prefix  = "193.166.1.0/24"
   security_group_id = openstack_networking_secgroup_v2.security_group.id
 }
 resource "openstack_networking_secgroup_rule_v2" "aux-k8s-portsp-in" {
