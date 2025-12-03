@@ -7,9 +7,6 @@ apt:
     docker.list:
       source: deb [arch=amd64] https://download.docker.com/linux/ubuntu $RELEASE stable
       keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
-    helm.list:
-      source: deb [arch=amd64] https://baltocdn.com/helm/stable/debian/ all main
-      keyid: 81BF832E2F19CD2AA0471959294AC4827C1A168A # https://baltocdn.com/helm/signing.asc
 packages:
 - ca-certificates
 - containerd.io
@@ -60,6 +57,8 @@ ssh_keys:
 runcmd:
 - systemctl disable --now docker.service docker.socket
 - rm -f /var/run/docker.sock
+- sysctl -p /etc/sysctl.d/unprivileged_port_start.conf
+- tar -xzf /tmp/helm.tar.gz -C /tmp && mv /tmp/linux-amd64/helm /usr/bin/helm && chmod 755 /usr/bin/helm
 - loginctl enable-linger ubuntu
 - chown ubuntu:root /home/ubuntu # in some versions docker setup has problems without it
 - su - ubuntu -c '/usr/local/sbin/setup.sh'
@@ -94,6 +93,11 @@ write_files:
     uri: https://dl.k8s.io/v1.31.2/bin/linux/amd64/kubectl
   owner: root:root
   path: /usr/bin/kubectl
+  permissions: '0755'
+- source:
+    uri: https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz
+  owner: root:root
+  path: /tmp/helm.tar.gz
   permissions: '0755'
 fs_setup:
 - label: data
