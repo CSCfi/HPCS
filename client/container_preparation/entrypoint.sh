@@ -126,10 +126,10 @@ if [ -n "$encrypted" ]; then
 
 fi
 
-ps "$spire_agent_pid" >/dev/null || (
+if ! kill -0 "$spire_agent_pid" 2>/dev/null; then
 	echo "spire agent died, aborting"
 	end_entrypoint "$spire_agent_pid" 1
-)
+fi
 
 #
 ## [END] Perform node attestation
@@ -158,7 +158,8 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Contai
 #
 
 if [ -n "$encrypted" ]; then
-	spiffeID=$(spire-agent api fetch --output json -socketPath /tmp/agent.sock | jq '.svids[0].spiffe_id' -r)
+	# spiffeID=$(spire-agent api fetch --output json -socketPath /tmp/agent.sock | jq '.svids[0].spiffe_id' -r)
+	spiffeID=$(python3 ./utils/fetch_svid.py -s /tmp/agent.sock)
 fi
 
 if [ -z "$encrypted" ]; then
