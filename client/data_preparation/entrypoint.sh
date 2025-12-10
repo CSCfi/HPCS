@@ -94,14 +94,20 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Entering en
 
 printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Registering and running SPIRE Agent"
 
-python3 ./utils/spawn_agent.py --config "$config" >/dev/null 2>/dev/null &
+python3 ./utils/spawn_agent.py --config "$config" > /tmp/spawn_agent.log 2>&1 &
 spire_agent_pid=$!
 
 until [ -e /tmp/agent.sock ]; do
 	printf "%b\n" "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
 	sleep 10
-	if ! pgrep -f "$spire_agent_pid" > /dev/null; then
+	if ! kill -0 "$spire_agent_pid" 2>/dev/null; then
 		echo "spire agent died, aborting"
+		echo "=== spawn_agent.py output ==="
+		cat /tmp/spawn_agent.log 2>/dev/null || echo "No spawn_agent.log"
+		echo "=== agent.log ==="
+		cat /tmp/agent.log 2>/dev/null || echo "No agent.log"
+		echo "=== agent.conf ==="
+		cat /tmp/agent.conf 2>/dev/null || echo "No agent.conf"
 		end_entrypoint "$spire_agent_pid" 1
 	fi
 done
@@ -128,7 +134,8 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Data prepar
 ## [RUN] Ship private key to the vault (Creation of workload identity to give access to the key, writing key to the vault)
 #
 
-spiffeID=$(spire-agent api fetch --output json -socketPath /tmp/agent.sock | jq '.svids[0].spiffe_id' -r)
+# spiffeID=$(spire-agent api fetch --output json -socketPath /tmp/agent.sock | jq '.svids[0].spiffe_id' -r)
+spiffeID=$(python3 ./utils/fetch_svid.py -s /tmp/agent.sock)
 
 printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Writing key to the vault, using spiffeID $spiffeID"
 
