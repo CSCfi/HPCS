@@ -94,6 +94,9 @@ do
     sleep 10
 done
 
+# Make socket accessible to all processes
+chmod 777 /tmp/agent.sock
+
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Starting container setup"
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Decrypting container image"
