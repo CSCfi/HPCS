@@ -71,6 +71,20 @@ hvac_client = vault_login(
 )
 
 
+def get_vault_client():
+    """Get a fresh Vault client with a new JWT token.
+
+    JWT SVIDs expire after 1h and Vault tokens expire after 24h.
+    This function fetches a fresh JWT from SPIRE and authenticates with Vault,
+    ensuring we always have a valid token for Vault operations.
+    """
+    return vault_login(
+        configuration["vault"]["url"],
+        get_server_identity_JWT(),
+        configuration["vault"]["server-role"],
+    )
+
+
 # Dummy endpoint that handles the registration of compute nodes.
 # TODO: Develop a SPIRE plugin that handles this better than this dummy endpoint
 # THIS ENDPOINT SHOULD BE REMOVED, IT DOESN'T CERTIFY ANYHTING, IT WILL PROVIDE AN IDENTITY TO ANYONE ASKING FOR
@@ -116,8 +130,11 @@ async def handle_client_registration():
     client_id = request.headers.get("Remote-Addr")
     client_id = hashlib.sha256(client_id.encode()).hexdigest()[0:9]
 
+    # Get fresh Vault client to avoid token expiration issues
+    vault_client = get_vault_client()
+
     # Write a policy to the vault to authorize the client to write secrets
-    write_client_policy(hvac_client, f"client_{client_id}")
+    write_client_policy(vault_client, f"client_{client_id}")
 
     # Create spiffeID out of this client id
     agent_spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}")
@@ -135,28 +152,25 @@ async def handle_client_registration():
         workload_spiffeID = SpiffeId(f"spiffe://{trust_domain}/c/{client_id}/workload")
 
         # Write the role bound to the workload's spiffeID
-        write_client_role(hvac_client, f"client_{client_id}", workload_spiffeID)
+        write_client_role(vault_client, f"client_{client_id}", workload_spiffeID)
 
-        # For each authorized container preparation process (Here, a list of docker container_preparation image names)
-        for digest in get_build_env_image_digests():
-            digest = digest.replace("\n", "")
-            workload_selector = f"docker:image_id:{digest}"
+        # Register workload entry using unix:uid selector (simpler and more reliable than docker)
+        # All client containers run as root (uid:0)
+        workload_selector = "unix:uid:0"
+        result = entry_create(
+            agent_spiffeID, workload_spiffeID, [workload_selector]
+        )
 
-            # Register a workload bound to the agent, and the workload (Here, a container image)
-            result = entry_create(
-                agent_spiffeID, workload_spiffeID, [workload_selector]
-            )
-
-            # Do not stop if entry already exists, stop for any other error
-            if result == None or not result.stderr.decode().find(
-                "similar entry already exists"
-            ):
-                return {
-                    "success": False,
-                    "message": "token created, it expires in 60 seconds. An error occured while registering workloads.",
-                    "client_id": client_id,
-                    "token": agent_token,
-                }
+        # Do not stop if entry already exists, stop for any other error
+        if result == None or not result.stderr.decode().find(
+            "similar entry already exists"
+        ):
+            return {
+                "success": False,
+                "message": "token created, it expires in 60 seconds. An error occured while registering workloads.",
+                "client_id": client_id,
+                "token": agent_token,
+            }
 
         # Spire-Agent binary
         result = entry_create(
@@ -289,11 +303,14 @@ async def handle_workload_creation():
             compute_nodes_added[compute_node]["users"] = users_added
             compute_nodes_added[compute_node]["groups"] = groups_added
 
+        # Get fresh Vault client to avoid token expiration issues
+        vault_client = get_vault_client()
+
         # Generate and create a policy that gives read-only access to the application's secret
-        write_user_policy(hvac_client, f"client_{client_id}", data["secret"])
+        write_user_policy(vault_client, f"client_{client_id}", data["secret"])
 
         # Generate and create a role bound to the policy and to the spiffeID
-        write_user_role(hvac_client, f"client_{client_id}", data["secret"], spiffeID)
+        write_user_role(vault_client, f"client_{client_id}", data["secret"], spiffeID)
 
         # Success
         return {
