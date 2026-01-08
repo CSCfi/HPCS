@@ -124,12 +124,18 @@ if [ -n "$encrypted" ]; then
 	python3 ./utils/spawn_agent.py --config "$config" >/dev/null 2>/dev/null &
 	spire_agent_pid=$!
 
-fi
+	# Wait for socket to be created
+	until [ -e /tmp/agent.sock ]; do
+		sleep 2
+		if ! ps "$spire_agent_pid" >/dev/null 2>&1; then
+			echo "spire agent died, aborting"
+			end_entrypoint "$spire_agent_pid" 1
+		fi
+	done
 
-ps "$spire_agent_pid" >/dev/null || (
-	echo "spire agent died, aborting"
-	end_entrypoint "$spire_agent_pid" 1
-)
+	# Make socket accessible to all processes
+	chmod 777 /tmp/agent.sock
+fi
 
 #
 ## [END] Perform node attestation

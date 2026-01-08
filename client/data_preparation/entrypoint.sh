@@ -106,6 +106,9 @@ until [ -e /tmp/agent.sock ]; do
 	fi
 done
 
+# Make socket accessible to all processes
+chmod 777 /tmp/agent.sock
+
 #
 ## [END] Perform node attestation
 #
