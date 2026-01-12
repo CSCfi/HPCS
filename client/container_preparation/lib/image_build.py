@@ -106,6 +106,7 @@ def create_sif_image(
     docker_host_socket_path: str,
     encrypted=False,
     force=True,
+    verbose=False,
 ):
     """Creates an Apptainer SIF image (encrypted or not) using the sd-container/build_env
     out of a prepared OCI image.
@@ -154,7 +155,7 @@ def create_sif_image(
             group_add=[f"{os.stat(docker_socket_path).st_gid}"],
             stderr=True,
         )
-        if output:
+        if verbose:
             print(f"Apptainer build output: {output.decode('utf-8')}")
 
     # Keeping the if/else for easy code rollback if encrypted containers can be used (that's why we don't have only one "docker_client.containers.run()")
@@ -168,7 +169,7 @@ def create_sif_image(
             group_add=[f"{os.stat(docker_socket_path).st_gid}"],
             stderr=True,
         )
-        if output:
+        if verbose:
             print(f"Apptainer build output: {output.decode('utf-8')}")
 
         # Generate necessary keys to encrypt the SIF file
