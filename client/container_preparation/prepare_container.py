@@ -11,9 +11,11 @@ if __name__ == "__main__":
     # For future usage
     base_image = arguments.base_oci_image
     sif_path = arguments.sif_path
+    sif_host_path = arguments.sif_host_path if arguments.sif_host_path else arguments.sif_path
     encrypted = arguments.encrypted
     docker_socket_path = arguments.docker_path
     docker_host_socket_path = arguments.docker_host_path
+    force = arguments.force
 
     # Checking the access to the docker socket - avoid waiting for an error to kill the program
     print(f"Checking the access to docker socket at {docker_socket_path}")
@@ -42,10 +44,12 @@ if __name__ == "__main__":
     create_sif_image(
         prepared_image_tag,
         destination_path=sif_path,
+        destination_host_path=sif_host_path,
         docker_client=docker_client,
         docker_socket_path=docker_socket_path,
         docker_host_socket_path=docker_host_socket_path,
         encrypted=encrypted,
+        force=force,
     )
 
     print(f"{sif_path}/{prepared_image_tag.split(':')[0]}.sif successfully created")
