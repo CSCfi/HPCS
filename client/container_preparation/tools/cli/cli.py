@@ -37,8 +37,21 @@ def parse_arguments() -> argparse.ArgumentParser:
     parser.add_argument(
         "--docker-host-path",
         type=str,
-        help="Path to the docker socket (default : /var/run/docker.sock)",
+        help="Path to the docker socket on the host (default : /var/run/docker.sock)",
         default="/var/run/docker.sock",
+    )
+    parser.add_argument(
+        "--sif-host-path",
+        type=str,
+        help="Path to the SIF directory on the host (default : same as --sif-path). Use this when running in a container with volume mounts",
+        default=None,
+    )
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        help="Force overwrite existing SIF image (default : True)",
+        default=True,
     )
 
     return parser.parse_args()

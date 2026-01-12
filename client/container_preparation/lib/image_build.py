@@ -100,18 +100,22 @@ def build_prepared_image(base_image_tag, docker_client: DockerClient):
 def create_sif_image(
     prepared_image_tag,
     destination_path,
+    destination_host_path,
     docker_client: DockerClient,
     docker_socket_path: str,
     docker_host_socket_path: str,
     encrypted=False,
+    force=True,
 ):
     """Creates an Apptainer SIF image (encrypted or not) using the sd-container/build_env
     out of a prepared OCI image.
 
     Args:
         prepared_image_tag (string): The OCI Image tag (i.e sd-container/prepared_cowsay)
-        destination_path (string): The path where the .sif image will be written (i.e /tmp => /tmp/prepared_cowsay.sif)
+        destination_path (string): The path where the .sif image will be written from this container's perspective (i.e /tmp => /tmp/prepared_cowsay.sif)
+        destination_host_path (string): The path on the host machine where the .sif image will be written (for nested container volume mounts)
         encrypted (bool, optional): Wether or not to encrypt the container, keys are generated relatively to the current path, and are called "keys, keys.pub". Defaults to False.
+        force (bool, optional): Force overwrite of existing SIF image. Defaults to True.
     """
     # Check that the build environment exists
     build_env_exists = check_build_env_exists(docker_client=docker_client)
@@ -127,59 +131,67 @@ def create_sif_image(
     prepared_image_name = prepared_image_tag.split("/")[-1].split(":")[0]
 
     # Composing the final command to run (the build env consists in apptainer build + the command var)
-    command = f"/output/{prepared_image_name}.sif docker-daemon://{prepared_image_tag}"
+    force_flag = "--force " if force else ""
+    command = f"{force_flag}/output/{prepared_image_name}.sif docker-daemon://{prepared_image_tag}"
 
     # Composing the dictionary of volumes (docker socket for image reading, output directory for result image)
+    # Use destination_host_path for the volume mount (host perspective), not destination_path (container perspective)
     volumes = [
         f"{docker_host_socket_path}:{docker_socket_path}",
-        f"{destination_path}:/output",
+        f"{destination_host_path}:/output",
         "/etc/passwd:/etc/passwd",
         "/etc/group:/etc/group",
     ]
 
     # Run the secured container build
     if not encrypted:
-        docker_client.containers.run(
+        output = docker_client.containers.run(
             image=build_env_image_tag,
             command=command,
             volumes=volumes,
             remove=True,
             user=os.getuid(),
             group_add=[f"{os.stat(docker_socket_path).st_gid}"],
+            stderr=True,
         )
+        if output:
+            print(f"Apptainer build output: {output.decode('utf-8')}")
 
     # Keeping the if/else for easy code rollback if encrypted containers can be used (that's why we don't have only one "docker_client.containers.run()")
     else:
-        docker_client.containers.run(
+        output = docker_client.containers.run(
             image=build_env_image_tag,
             command=command,
             volumes=volumes,
             remove=True,
             user=os.getuid(),
             group_add=[f"{os.stat(docker_socket_path).st_gid}"],
+            stderr=True,
         )
+        if output:
+            print(f"Apptainer build output: {output.decode('utf-8')}")
 
         # Generate necessary keys to encrypt the SIF file
         sif_decryption_key = x25519.Identity.generate()
         sif_enryption_key = sif_decryption_key.to_public()
 
         # Encrypt the SIF image
-        with open(f"/tmp/{prepared_image_name}.sif", "rb") as inputfile:
+        with open(f"{destination_path}/{prepared_image_name}.sif", "rb") as inputfile:
             encrypted = encrypt(inputfile.read(), [sif_enryption_key])
 
         # Write the encrypted SIF image to the encrypted SIF file
-        open(f"/tmp/encrypted_{prepared_image_name}.sif", "wb+").write(encrypted)
+        open(f"{destination_path}/encrypted_{prepared_image_name}.sif", "wb+").write(encrypted)
 
         # Remove the unencrypted image
-        os.remove(f"/tmp/{prepared_image_name}.sif")
+        os.remove(f"{destination_path}/{prepared_image_name}.sif")
 
         print(
-            f"SIF image encrypted, written to /tmp/encrypted_{prepared_image_name}.sif"
+            f"SIF image encrypted, written to {destination_path}/encrypted_{prepared_image_name}.sif"
         )
 
-        open(f"/tmp/keys", "w+").write(str(sif_decryption_key))
+        open(f"{destination_path}/keys", "w+").write(str(sif_decryption_key))
 
-        print(f"Encryption : Keys written to /tmp/keys")
+        print(f"Encryption : Keys written to {destination_path}/keys")
 
         # Commenting out the encrypted container runtime part since we can't run them atm
         # # Define pem path
