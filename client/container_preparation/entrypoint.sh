@@ -6,6 +6,7 @@
 # Default values for arguments
 docker_path="/var/run/docker.sock"
 docker_host_path=${docker_path}
+sif_host_path=""
 
 # Argument parser, arguments for both container preparation and key shipping should be handled here.
 parse_args() {
@@ -57,6 +58,10 @@ parse_args() {
 			;;
 		--docker-host-path)
 			docker_host_path="$2"
+			shift 2
+			;;
+		--sif-host-path)
+			sif_host_path="$2"
 			shift 2
 			;;
 		-h | --help)
@@ -148,9 +153,17 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Container preparation]${NC} Run co
 #
 
 if [ -z "$encrypted" ]; then
-	python3 ./prepare_container.py -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	if [ -n "$sif_host_path" ]; then
+		python3 ./prepare_container.py -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" --sif-host-path "${sif_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	else
+		python3 ./prepare_container.py -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	fi
 else
-	python3 ./prepare_container.py -e -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	if [ -n "$sif_host_path" ]; then
+		python3 ./prepare_container.py -e -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" --sif-host-path "${sif_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	else
+		python3 ./prepare_container.py -e -b "$base_oci_image" -s "$sif_path" -d "$docker_path" --docker-host-path "${docker_host_path}" || end_entrypoint "$spire_agent_pid" 1
+	fi
 fi
 
 #
