@@ -63,13 +63,6 @@ if configuration["spire-server"].get("pre-command"):
 # Defining the trust domain (SPIRE Trust Domain)
 trust_domain = configuration["spire-server"]["trust-domain"]
 
-# Perform vault login, to be able to run later operations against vault
-hvac_client = vault_login(
-    configuration["vault"]["url"],
-    get_server_identity_JWT(),
-    configuration["vault"]["server-role"],
-)
-
 
 def get_vault_client():
     """Get a fresh Vault client with a new JWT token.
@@ -154,23 +147,26 @@ async def handle_client_registration():
         # Write the role bound to the workload's spiffeID
         write_client_role(vault_client, f"client_{client_id}", workload_spiffeID)
 
-        # Register workload entry using unix:uid selector (simpler and more reliable than docker)
-        # All client containers run as root (uid:0)
-        workload_selector = "unix:uid:0"
-        result = entry_create(
-            agent_spiffeID, workload_spiffeID, [workload_selector]
-        )
+        # For each authorized container preparation process (Here, a list of docker container_preparation image names)
+        for digest in get_build_env_image_digests():
+            digest = digest.replace("\n", "")
+            workload_selector = f"docker:image_id:{digest}"
 
-        # Do not stop if entry already exists, stop for any other error
-        if result == None or not result.stderr.decode().find(
-            "similar entry already exists"
-        ):
-            return {
-                "success": False,
-                "message": "token created, it expires in 60 seconds. An error occured while registering workloads.",
-                "client_id": client_id,
-                "token": agent_token,
-            }
+            # Register a workload bound to the agent, and the workload (Here, a container image)
+            result = entry_create(
+                agent_spiffeID, workload_spiffeID, [workload_selector]
+            )
+
+            # Do not stop if entry already exists, stop for any other error
+            if result == None or not result.stderr.decode().find(
+                "similar entry already exists"
+            ):
+                return {
+                    "success": False,
+                    "message": "token created, it expires in 60 seconds. An error occured while registering workloads.",
+                    "client_id": client_id,
+                    "token": agent_token,
+                }
 
         # Spire-Agent binary
         result = entry_create(
