@@ -1,5 +1,5 @@
 from paramiko.client import SSHClient
-from paramiko import SSHException, AutoAddPolicy, RSAKey
+from paramiko import SSHException, AutoAddPolicy, RSAKey, PasswordRequiredException
 from scp import SCPClient
 
 # Hostname and port configuration
@@ -30,7 +30,15 @@ def ssh_connect(username: str) -> SSHClient:
 
     # Probably running in a container
     except SSHException:
-        pkey = RSAKey.from_private_key_file("/tmp/.ssh/id_rsa")
+        try:
+            pkey = RSAKey.from_private_key_file("/tmp/.ssh/id_rsa")
+        except PasswordRequiredException:
+            import getpass
+
+            p = getpass.getpass(
+                prompt="Please enter your ssh key decryption password\n"
+            )
+            pkey = RSAKey.from_private_key_file("/tmp/.ssh/id_rsa", p)
         client.connect(
             host,
             port,
