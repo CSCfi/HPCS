@@ -1,3 +1,4 @@
-ghcr.io/cscfi/hpcs/data-prep:dev-20251022
-ghcr.io/cscfi/hpcs/container-prep:dev-20251022
-ghcr.io/cscfi/hpcs/job-prep:dev-20251022
+sha256:98bf31bf00d59897e489ef24c5cead47e0a28ddf884a7568e9def07b78df7076
+sha256:74b6e0bf8024d5e35876b4199a004a32e25e4cf327ee3f76b35a6ec5885fe989
+sha256:1b2c346699b177ac40231d73a5631e1821ce32ec3d859bb2896cfae6f7f0c360
+
