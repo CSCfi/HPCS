@@ -243,8 +243,25 @@ async def handle_workload_creation():
             # Compute node's agent spiffeID
             parentID = SpiffeId(f"spiffe://{trust_domain}/h/{compute_node}")
 
-            # For each user
-            if data["users"] != None:
+            # For each user — use uid selectors if provided (more reliable on HPC systems
+            # where static binaries can't do LDAP lookups for unix:user resolution)
+            uids = data.get("uids")
+            if uids is not None:
+                for uid in uids:
+                    selectors = [f"unix:uid:{uid}"]
+                    result = entry_create(parentID, spiffeID, selectors)
+                    if result == None or not result.stderr.decode().find(
+                        "similar entry already exists"
+                    ):
+                        return {
+                            "success": False,
+                            "message": f"error occured while registering a workload : {str(spiffeID)}. Registered selectors available in compute_nodes_added subobject.",
+                            "clientID": client_id,
+                            "spiffeID": str(spiffeID),
+                            "compute_nodes_added": compute_nodes_added,
+                        }
+                    users_added.append(uid)
+            elif data["users"] != None:
                 for user in data["users"]:
 
                     # Create proper selector
