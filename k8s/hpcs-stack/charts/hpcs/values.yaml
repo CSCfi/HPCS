@@ -4,6 +4,7 @@ image:
   # tag:
   pullPolicy: IfNotPresent
 server:
+  digests: ""
   port: 10080
   spire:
     address: localhost
