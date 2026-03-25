@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: hpcs-server
 data:
+  digests: |
+{{ .Values.server.digests | indent 4 }}
   hpcs-server.conf: |
     [spire-server]
     address = {{ .Values.server.spire.address }}
