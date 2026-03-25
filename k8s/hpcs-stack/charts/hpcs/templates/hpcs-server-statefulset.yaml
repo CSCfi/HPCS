@@ -28,6 +28,10 @@ spec:
             - name: hpcs-server-configs
               mountPath: /tmp/
               readOnly: false
+            - name: hpcs-server-configs
+              mountPath: /server/tools/digests
+              subPath: digests
+              readOnly: true
             - name: hpcs-spire-sockets
               mountPath: /var/run/sockets
               readOnly: false
