@@ -136,7 +136,7 @@ echo "$data_key" > /tmp/container_key
 echo "Decrypting container image ..."
 
 # Decrypt the container image
-age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || exit 1
+age --decrypt -i  /tmp/container_key -o $WORKING_DIRECTORY/app.sif APPLICATION_PATH || cleanup $spire_agent_pid 1
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Creating encrypted volumes"
 
