@@ -236,7 +236,7 @@ def validate_options(options: argparse.ArgumentParser):
 
 
 def create_authorized_workloads(
-    SVID: JwtSvid, secret, url, users, groups, compute_nodes
+    SVID: JwtSvid, secret, url, users, groups, compute_nodes, uids=None
 ):
     """Create workloads that are authorized to access to a secret
 
@@ -248,6 +248,7 @@ def create_authorized_workloads(
         users ([str]): List of users in UNIX format, comma separated
         groups ([str]): List of groups in UNIX format, comma separated
         compute_nodes ([str]): List of compute nodes UNIX format, comma separated
+        uids ([str]): List of numeric UIDs resolved from the HPC system, used instead of usernames for workload attestation
 
     Returns:
         Data returned by the server (spiffeID to access the secret, this client's id, the path to the secret created workloads have access to)
@@ -261,6 +262,7 @@ def create_authorized_workloads(
         "users": users,
         "groups": groups,
         "compute_nodes": compute_nodes,
+        "uids": uids,
     }
 
     # POST request
@@ -308,6 +310,22 @@ if __name__ == "__main__":
         username,
     ) = validate_options(options)
 
+    # Create SSH connection early so we can resolve UIDs from the HPC system
+    ssh_client = ssh_connect(username=username)
+
+    # Resolve UIDs for each user via SSH — the unix workload attestor on compute nodes
+    # uses static binaries that can't do LDAP lookups, so only produces unix:uid selectors
+    uids = None
+    if users is not None:
+        uids = []
+        for user in users:
+            _, stdout, _ = ssh_run_command(ssh_client, f"id -u {user}")
+            uid = stdout.read().decode().strip()
+            if not uid.isdigit():
+                print(f"Error: could not resolve UID for user '{user}' on the supercomputer")
+                exit(1)
+            uids.append(uid)
+
     # Create the workloadAPI access
     jwt_workload_api = default_jwt_source.DefaultJwtSource(
         spiffe_socket_path=f"unix://{socketpath}",
@@ -326,6 +344,7 @@ if __name__ == "__main__":
         users,
         groups,
         compute_nodes,
+        uids,
     )
 
     # Login to the vault using client's certificate
