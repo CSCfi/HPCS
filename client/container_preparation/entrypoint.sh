@@ -100,10 +100,10 @@ end_entrypoint() {
 			mv /tmp/agent.conf "/tmp/agent.conf-${timestamp}" || true
 		fi
 		for suffix in log conf sock ; do
-			rm "/tmp/agent.${suffix}"
+			rm -f "/tmp/agent.${suffix}"
 		done
 		rm -f /tmp/keys
-		rm /tmp/dataset_info.yaml
+		rm -f /tmp/dataset_info.yaml
 		kill "$1"
 	fi
 	exit "$2"
