@@ -28,6 +28,8 @@
 
 # Cleanup
 cleanup() {
+    echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} === spire-agent log ==="
+    cat /tmp/agent.log 2>/dev/null || echo "(no agent log found)"
     rm -r /tmp/data
     rm /tmp/agent*
     kill "$1"
