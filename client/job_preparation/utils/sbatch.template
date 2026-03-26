@@ -93,7 +93,7 @@ fi
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running agent registration"
 
 # Spawn spire-agent
-python3 ./utils/spawn_agent.py --config ~/.config/hpcs-client.conf -cn > $WORKING_DIRECTORY/agent.log 2> $WORKING_DIRECTORY/agent.log &
+python3 -u ./utils/spawn_agent.py --config ~/.config/hpcs-client.conf -cn > $WORKING_DIRECTORY/agent.log 2>&1 &
 spire_agent_pid=$!
 
 # Wait until agent runs properly
