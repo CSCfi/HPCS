@@ -112,8 +112,14 @@ echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Decrypting container image"
 
 echo "Getting SVID from workload API ..."
 
-# Get SVID from workload
-svid=$(spire-agent api fetch jwt -audience TESTING -socketPath /tmp/agent.sock -spiffeID APPLICATION_SPIFFEID | head -n2 | tail -n 1 | tr -d ' ' | tr -d '\t' )
+# Retry SVID fetch — entries may take a few seconds to sync after attestation
+svid=""
+for i in 1 2 3 4 5; do
+    svid=$(spire-agent api fetch jwt -audience TESTING -socketPath /tmp/agent.sock -spiffeID APPLICATION_SPIFFEID 2>/dev/null | head -n2 | tail -n 1 | tr -d ' ' | tr -d '\t')
+    [ -n "$svid" ] && break
+    echo "SVID not yet available, retrying in 5 seconds (attempt $i/5) ..."
+    sleep 5
+done
 
 echo "Logging in to the vault ..."
 
