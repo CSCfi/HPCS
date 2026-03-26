@@ -379,7 +379,7 @@ if __name__ == "__main__":
     )
 
     print(
-        f"Data and info file were shipped to te supercomputer. Info about the dataset are available at {options.data_path_at_rest}/{secret_name}.info.yaml"
+        f"Data and info file were shipped to the supercomputer. Info about the dataset are available at {options.data_path_at_rest.rstrip('/')}/{secret_name}.info.yaml"
     )
 
     ssh_client.close()
