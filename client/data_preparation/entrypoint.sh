@@ -105,13 +105,15 @@ printf "%b\n" "${YELLOW}[LUMI-SD]${NC}${BLUE}[Data preparation]${NC} Registering
 python3 ./utils/spawn_agent.py --config "$config" >/dev/null 2>/dev/null &
 spire_agent_pid=$!
 
+# Wait for socket to be created
+sleep 2
 until [ -e /tmp/agent.sock ]; do
-	printf "%b\n" "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 10 seconds ${NC}"
-	sleep 10
-	if ! ps "$spire_agent_pid" >/dev/null 2>&1; then
-		echo "spire agent died, aborting"
-		end_entrypoint "$spire_agent_pid" 1
-	fi
+    if ! ps "$spire_agent_pid" >/dev/null 2>&1; then
+	echo "spire agent died, aborting"
+	end_entrypoint "$spire_agent_pid" 1
+    fi
+    printf "%b\n" "${RED}[LUMI-SD][Data preparation] Spire workload api socket doesn't exist, waiting 5 seconds ${NC}"
+    sleep 5
 done
 
 # Make socket accessible to all processes
