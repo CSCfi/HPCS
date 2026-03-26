@@ -82,6 +82,13 @@ if ! which gocryptfs ; then
     rm -r gocryptfs*
 fi
 
+if ! which spire-agent ; then
+    mkdir -p bin
+    curl -O -L https://github.com/spiffe/spire/releases/download/v1.9.6/spire-1.9.6-linux-amd64-musl.tar.gz || exit 1
+    tar xvf spire-1.9.6-linux-amd64-musl.tar.gz
+    mv spire-1.9.6/bin/spire-agent ./bin/
+    rm -r spire-1.9.6*
+fi
 
 echo -e "${YELLOW}[LUMI-SD]${NC}${BLUE}[Job]${NC} Running agent registration"
 
