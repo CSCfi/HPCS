@@ -70,9 +70,17 @@ parse_args() {
 end_entrypoint() {
 	echo "Cleaning everything before leaving ..."
 	rm -rf /tmp/data
-	rm /tmp/agent*
+	# On failure, preserve agent logs and config for debugging before removing them
+	if [ "${2}" -ne 0 ]; then
+		timestamp=$(date +%s)
+		mv /tmp/agent.log "/tmp/agent.log-${timestamp}" || true
+		mv /tmp/agent.conf "/tmp/agent.conf-${timestamp}" || true
+	fi
+	for suffix in log conf sock; do
+		rm -f "/tmp/agent.${suffix}"
+	done
 	rm -f /tmp/keys
-	rm /tmp/dataset_info.yaml
+	rm -f /tmp/dataset_info.yaml
 	kill "$1"
 	exit "$2"
 }

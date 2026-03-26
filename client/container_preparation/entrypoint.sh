@@ -94,7 +94,8 @@ end_entrypoint() {
 	else
 		echo "Cleaning everything before leaving ..."
 		rm -rf /tmp/data
-		if [ "${1}" -ne 0 ] ; then
+		# On failure, preserve agent logs and config for debugging before removing them
+		if [ "${2}" -ne 0 ] ; then
 			timestamp=$(date +%s)
 			mv /tmp/agent.log "/tmp/agent.log-${timestamp}" || true
 			mv /tmp/agent.conf "/tmp/agent.conf-${timestamp}" || true
