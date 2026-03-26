@@ -88,48 +88,43 @@ if __name__ == "__main__":
     jobid = stdout.read().decode().split(" ")[-1].replace("\n", "")
     print(f"Job successfully created with id {jobid}")
 
-    # If user asked to follow the logs of the job
-    if options.follow:
-        # Follow the job's output
-        command = f"cd {options.workdir} ; touch {options.job_name}.out ; tail -f -n 0 {options.job_name}.out"
-        stdin, stdout, stderr = ssh_run_command(ssh_client, command, True)
-        stdin.close()
+    if options.follow or options.verbose:
+        # If verbose, stream job log output in a background thread with indentation
+        if options.verbose:
+            verbose_client = ssh_connect(options.username)
+            command = f"cd {options.workdir} ; touch {options.job_name}.out ; tail -f -n 0 {options.job_name}.out"
+            _, log_stdout, _ = ssh_run_command(verbose_client, command, True)
 
-        # Keep read alive
-        for line in iter(stdout.readline, ""):
-            print(line, end="")
+            def stream_log():
+                for line in iter(log_stdout.readline, ""):
+                    print(f"    {line}", end="")
 
-    # If user doesn't follow job's logs
-    else:
-        # Still, follow the job's status at fixed interval
-        print(
-            f"Waiting for the job to run. You can now exit this script if needed, outputs will be available in {options.workdir}/output when finished"
-        )
+            Thread(target=stream_log, daemon=True).start()
 
-        # Specific output format squeue command to parse informations about submitted job
+        # Poll squeue until the job completes
         command = f"squeue -o '%A;%u;%T' | grep {options.username} | grep {jobid}"
-
-        # Run first status update
         stdin, stdout, stderr = ssh_run_command(ssh_client, command, True)
         job_status = ""
         stdout = stdout.read().decode().replace("\n", "")
         stdin.close()
 
-        # While job runs (while it has an entry in squeue)
         while stdout != "":
-            # If status has changed
             if job_status != stdout.split(";")[-1]:
                 job_status = stdout.split(";")[-1]
-                print(f"Job's state changed, job is now in state : {job_status}")
-
-            # Wait
+                print(f"Job status: {job_status}")
             sleep(10)
-
-            # Run status update
             stdin, stdout, stderr = ssh_run_command(ssh_client, command, True)
             stdout = stdout.read().decode().replace("\n", "")
             stdin.close()
 
-    # Job is over
-    print(f"Job finished, please find outputs in {options.workdir}/output")
+        print(f"Job finished, outputs available in {options.workdir}/output")
+
+        if options.verbose:
+            verbose_client.close()
+
+    else:
+        print(
+            f"Outputs will be available in {options.workdir}/output when the job finishes"
+        )
+
     ssh_client.close()
