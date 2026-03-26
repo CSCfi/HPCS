@@ -1,6 +1,54 @@
 import argparse
 from re import search
 from os import path
+
+
+def expand_nodelist(nodelist_expr: str) -> list:
+    """Expand a Slurm nodelist expression into individual node names.
+
+    Supports formats like:
+        nid003044
+        nid[003044-003046]
+        nid[005124,005126,005128-005133,005136-005153]
+        nid[003044-003046],other005
+    """
+    nodes = []
+
+    # Split on top-level commas (i.e. not inside brackets)
+    parts = []
+    depth = 0
+    current = []
+    for char in nodelist_expr:
+        if char == "[":
+            depth += 1
+            current.append(char)
+        elif char == "]":
+            depth -= 1
+            current.append(char)
+        elif char == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    if current:
+        parts.append("".join(current))
+
+    for part in parts:
+        if "[" in part:
+            prefix, rest = part.split("[", 1)
+            rest = rest.rstrip("]")
+            for item in rest.split(","):
+                if "-" in item:
+                    start, end = item.split("-", 1)
+                    width = len(start)  # preserve zero-padding
+                    for i in range(int(start), int(end) + 1):
+                        nodes.append(f"{prefix}{str(i).zfill(width)}")
+                else:
+                    nodes.append(f"{prefix}{item}")
+        else:
+            nodes.append(part)
+
+    return nodes
 from pyspiffe.workloadapi import default_jwt_source, default_workload_api_client
 from pyspiffe.spiffe_id import spiffe_id
 from pyspiffe.exceptions import SpiffeIdError
