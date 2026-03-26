@@ -109,7 +109,14 @@ def parse_arguments() -> argparse.Namespace:
         "--follow",
         "-f",
         action="store_true",
-        help="Follow job's output (default : False)",
+        help="Follow job status, polling squeue until the job completes (default: False)",
+        default=False,
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Stream job log output in addition to status updates, implies --follow (default: False)",
         default=False,
     )
 
