@@ -57,7 +57,7 @@ import requests
 from vault.vault_utils import vault_login, write_secret
 import yaml
 from hashlib import sha512
-from ssh_utils import ssh_connect, ssh_copy_file
+from ssh_utils import ssh_connect, ssh_copy_file, ssh_run_command
 from conf.client.conf import parse_configuration
 
 # Provide client_id from cli$
@@ -367,11 +367,9 @@ if __name__ == "__main__":
     # Compute file's checksum
     checksum = sha512(open(options.data_path, "rb").read()).hexdigest()
 
-    # Create SSH connection
-    ssh_client = ssh_connect(username=username)
-
-    # Ship data via SSH
-    ssh_copy_file(ssh_client, data_path, options.data_path_at_rest)
+    # Ensure destination directory exists, then ship data via SSH
+    ssh_run_command(ssh_client, f"mkdir -p {options.data_path_at_rest}")
+    ssh_copy_file(ssh_client, data_path, f"{options.data_path_at_rest}/{data_path.split('/')[-1]}".replace("//", "/"))
 
     # Write datasets info object
     dataset_info_object = {
