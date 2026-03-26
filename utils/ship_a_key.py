@@ -187,7 +187,7 @@ def validate_options(options: argparse.ArgumentParser):
     # Parse compute, check that their names are correctly formed (using UNIX regex's)
     compute_nodes = options.compute_nodes
     if compute_nodes != None:
-        compute_nodes = options.compute_nodes.split(",")
+        compute_nodes = expand_nodelist(options.compute_nodes)
         for compute_node in compute_nodes:
             if not search(
                 "^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$", compute_node
