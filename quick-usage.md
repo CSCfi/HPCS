@@ -1,9 +1,11 @@
-# Instructions for running HPCS as of the dev-fixes branch and :dev tags, April 1st 2025
+# Quick usage instructions
+
+As of the dev-usability branch and :dev container tags, April 1st 2025.
 
 ## What you need
 
 - Access to Lumi (and a project where you can run the compute job)
-- The unversioned configuration-containing files `local/hpcs-client.conf` and `docker-compose.yaml`. The contents are probably best generated with jinja2 / j2 from `local/hpcs-client.conf` and `docker-compose.yaml`, respectively. Edit at least the beginning of `config.yaml` and run
+- The configuration files `local/hpcs-client.conf` and `docker-compose.yaml`. The contents are probably best generated with jinja2 / j2 from `local/hpcs-client.conf.j2` and `docker-compose.yaml.j2`, respectively. Edit at least the beginning of `config.yaml` and run
 
 ```
 j2 local/hpcs-client.conf.j2 config.yaml > local/hpcs-client.conf
