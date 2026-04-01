@@ -1,0 +1,46 @@
+# HPCS configuration values
+# Used to render hpcs-client.conf.j2 and docker-compose.yml.j2
+
+# --- DEFINITELY EDIT THESE ---
+username: "" # your username on HPC
+server_host: "" # HPCS server hostname or IP
+project: ""
+
+# --- MIGHT WANT TO EDIT THESE ---
+scratch_dir: "/scratch/{{ project }}/{{ username }}"
+job_partition: debug # HPCS partition - debug is only for very short jobs
+container_image: talinx/jp2a          # Docker image to prepare and run on HPC
+input_dir: jp2a_input                 # Input data directory name (relative to local/)
+input_file: "image.png"               # Input file name
+encrypted_container_filename: encrypted_prepared_jp2a.sif
+encrypted_data_filename: encrypted_jp2a_input.tgz
+job_name: jp2a_job
+job_time: "00:10:00"
+job_nodes: 1
+# This is obviously specific to jp2a
+job_args: "/sd-container/encrypted/{{ input_dir }}/{{ input_file }} --width=100 --output=/sd-container/output/result"
+# This is all the Lumi "debug" nodes. They all get registered with Spire, and SLURM might
+# put the job on any of them. If you use a larger partition with more nodes instead,
+# it might not be a good idea to list all of them (not tested extensively).
+nodelist: "nid[002275-002276,002500-002501,002504-002506,002595-002597]" 
+
+# The rest of the values might change, mostly if the Spire deployment changes, but you
+# probably don't need to worry about them.
+
+# --- HPCS server ---
+spire_port: 30002
+hpcs_server_port: 30003
+vault_port: 30004
+trust_domain: hpcs
+vault_server_role: hpcs-server
+
+# --- Docker images ---
+container_prep_tag: dev
+data_prep_tag: dev
+job_prep_tag: dev
+
+# --- Supercomputer ---
+supercomputer_address: lumi.csc.fi
+supercomputer_port: 22
+docker_group: "145"                   # GID of the docker group on the host
+

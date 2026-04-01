@@ -1,0 +1,17 @@
+[spire-server]
+address = {{ server_host }}
+port = {{ spire_port }}
+trust-domain = {{ trust_domain }}
+pre-command = ""
+
+[hpcs-server]
+url = http://{{ server_host }}:{{ hpcs_server_port }}
+
+[vault]
+url = http://{{ server_host }}:{{ vault_port }}
+server-role = {{ vault_server_role }}
+
+[supercomputer]
+address = {{ supercomputer_address }}
+port = {{ supercomputer_port }}
+username = {{ username }}
