@@ -1,6 +1,6 @@
 # Quick usage instructions
 
-As of the dev-usability branch and :dev container tags, April 1st 2025.
+As of the dev-usability branch and :dev container tags, April 1st 2026.
 
 ## What you need
 
