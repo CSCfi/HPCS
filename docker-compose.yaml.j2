@@ -28,7 +28,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - $PWD/local:/tmp
-      - $PWD/.ssh:/tmp/.ssh
+      - $HOME/.ssh:/tmp/.ssh
     environment:
       - PWD=${PWD}
       - HOME=${HOME}
@@ -58,7 +58,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - $PWD/local:/tmp
-      - $PWD/.ssh:/tmp/.ssh
+      - $HOME/.ssh:/tmp/.ssh
     environment:
       - PWD=${PWD}
       - HOME=${HOME}
@@ -101,7 +101,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - $PWD/local:/tmp
-      - $PWD/.ssh:/tmp/.ssh
+      - $HOME/.ssh:/tmp/.ssh
     environment:
       - PWD=${PWD}
       - HOME=${HOME}
