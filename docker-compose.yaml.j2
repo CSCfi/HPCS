@@ -1,0 +1,110 @@
+{% set scratch_dir = scratch_root + "/" + project + "/" + username %}
+{% set job_args = container_input_base + "/" + input_dir + "/" + input_file + " " + job_args_flags %}
+services:
+  # Prerequisites: Pull base images before using container-prep
+  #   docker pull {{ container_image }}
+  container-prep:
+    image: ghcr.io/cscfi/hpcs/container-prep:{{ container_prep_tag }}
+    command:
+      - "--config"
+      - "/tmp/hpcs-client.conf"
+      - "-b"
+      - "{{ container_image }}"
+      - "-s"
+      - "/tmp"
+      - "--sif-host-path"
+      - "${PWD}/local"
+      - "-e"
+      - "-u"
+      - "{{ username }}"
+      - "-c"
+      - "{{ nodelist }}"
+      - "--data-path"
+      - "/tmp/{{ encrypted_container_filename }}"
+      - "--data-path-at-rest"
+      - "{{ scratch_dir }}/"
+      - "--username"
+      - "{{ username }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $PWD/local:/tmp
+      - $PWD/.ssh:/tmp/.ssh
+    environment:
+      - PWD=${PWD}
+      - HOME=${HOME}
+    group_add:
+      - "{{ docker_group }}"  # docker group
+    network_mode: host
+
+  data-prep:
+    image: ghcr.io/cscfi/hpcs/data-prep:{{ data_prep_tag }}
+    command:
+      - "--config"
+      - "/tmp/hpcs-client.conf"
+      - "-i"
+      - "/tmp/{{ input_dir }}"
+      - "-o"
+      - "/tmp/"
+      - "-u"
+      - "{{ username }}"
+      - "-c"
+      - "{{ nodelist }}"
+      - "--data-path"
+      - "/tmp/{{ encrypted_data_filename }}"
+      - "--data-path-at-rest"
+      - "{{ scratch_dir }}/"
+      - "--username"
+      - "{{ username }}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $PWD/local:/tmp
+      - $PWD/.ssh:/tmp/.ssh
+    environment:
+      - PWD=${PWD}
+      - HOME=${HOME}
+    group_add:
+      - "{{ docker_group }}"  # docker group
+    network_mode: host
+
+  job-prep:
+    image: ghcr.io/cscfi/hpcs/job-prep:{{ job_prep_tag }}
+    command:
+      - "--config"
+      - "/tmp/hpcs-client.conf"
+      - "-N"
+      - "{{ job_nodes }}"
+      - "-p"
+      - "{{ job_partition }}"
+      - "-t"
+      - "{{ job_time }}"
+      - "-A"
+      - "{{ project }}"
+      - "--nodelist"
+      - "{{ nodelist }}"
+      - "-J"
+      - "{{ job_name }}"
+      - "--workdir"
+      - "{{ scratch_dir }}"
+      - "-ai"
+      - "{{ scratch_dir }}/{{ encrypted_container_filename }}.info.yaml"
+      - "-di"
+      - "{{ scratch_dir }}/{{ encrypted_data_filename }}.info.yaml"
+      - "-args"
+      - "\"\\\" {{ job_args }} \\\"\""
+      - "-i"
+      - "{{ scratch_dir }}/verification_scripts"
+      - "-o"
+      - "{{ scratch_dir }}/verification_scripts"
+      - "-flags"
+      - "--env TERM=xterm-256color"
+      - "--follow"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $PWD/local:/tmp
+      - $PWD/.ssh:/tmp/.ssh
+    environment:
+      - PWD=${PWD}
+      - HOME=${HOME}
+    group_add:
+      - "{{ docker_group }}"  # docker group
+    network_mode: host

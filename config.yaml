@@ -4,10 +4,10 @@
 # --- DEFINITELY EDIT THESE ---
 username: "" # your username on HPC
 server_host: "" # HPCS server hostname or IP
-project: ""
+project: "" # like project_xxxxxxx
 
 # --- MIGHT WANT TO EDIT THESE ---
-scratch_dir: "/scratch/{{ project }}/{{ username }}"
+scratch_root: "/scratch"
 job_partition: debug # HPCS partition - debug is only for very short jobs
 container_image: talinx/jp2a          # Docker image to prepare and run on HPC
 input_dir: jp2a_input                 # Input data directory name (relative to local/)
@@ -18,7 +18,8 @@ job_name: jp2a_job
 job_time: "00:10:00"
 job_nodes: 1
 # This is obviously specific to jp2a
-job_args: "/sd-container/encrypted/{{ input_dir }}/{{ input_file }} --width=100 --output=/sd-container/output/result"
+container_input_base: "/sd-container/encrypted"
+job_args_flags: "--width=100 --output=/sd-container/output/result"
 # This is all the Lumi "debug" nodes. They all get registered with Spire, and SLURM might
 # put the job on any of them. If you use a larger partition with more nodes instead,
 # it might not be a good idea to list all of them (not tested extensively).
