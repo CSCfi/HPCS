@@ -15,6 +15,7 @@ j2 docker-compose.yaml.j2 config.yaml > docker-compose.yaml
 - Some input for the compute job. If you use the default job, talinx/jp2a, which generates ASCII art from bitmap files, this should be placed somewhere in `local/`. See `input_dir` in config.yaml.
 - The container you want to run computation on. For talinx/jp2, run `docker pull talinx/jp2a`.
 - `age` for decrypting the output
+- Previously, this repository stored some binaries as LFS objects. Now, the LFS budget has run out, so that doesn't work anymore. If you already have the required binaries in `client/container_preparation/input_logic/`, that if fine, but otherwise you need to supply in that directory `age` and `jq`. `tar` and `curl` were also stored there, but don't appear to be necessary.
 
 ## How to run
 
